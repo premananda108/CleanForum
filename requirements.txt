@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+redis==5.0.4
+numpy
+sentence-transformers
+pydantic
+aiohttp==3.9.5
+jinja2
+python-dotenv
