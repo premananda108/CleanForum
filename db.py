@@ -74,3 +74,18 @@ async def save_post(redis_client: redis.Redis, post_id: str, post_data: str, pre
         logger.error(f"Error saving post to Redis: {e}")
         raise
 
+async def get_all_posts_with_ids(redis_client: redis.Redis, prefix: str = "forum_post:"):
+    """Retrieves all forum posts from Redis with their keys (IDs)."""
+    posts = {}
+    try:
+        async for key in redis_client.scan_iter(f"{prefix}*"):
+            post_json = await redis_client.get(key)
+            if post_json:
+                # Remove prefix to get the clean ID
+                post_id = key.replace(prefix, "", 1)
+                posts[post_id] = post_json
+        return posts
+    except Exception as e:
+        logger.error(f"Error fetching posts with IDs from Redis: {e}")
+        return {}
+

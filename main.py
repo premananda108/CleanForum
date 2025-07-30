@@ -84,28 +84,38 @@ async def serve_forum(request: Request):
     return templates.TemplateResponse("forum.html", {"request": request})
 
 # --- Forum API Routes ---
-@app.get("/api/posts", response_model=List[Post])
+@app.get("/api/posts", response_model=List[Message])
 async def get_forum_posts():
-    """Retrieves all forum posts."""
+    """Retrieves all non-spam forum posts."""
     redis_client = get_redis()
     posts_json = await db.get_all_posts(redis_client)
-    # Parse JSON strings into Post objects
-    posts = [Post.model_validate_json(p) for p in posts_json]
-    # Sort by timestamp descending
-    posts.sort(key=lambda x: x.timestamp, reverse=True)
-    return posts
+    
+    all_messages = [Message.model_validate_json(p) for p in posts_json]
+    
+    # Filter out spam messages for the public view
+    non_spam_messages = [msg for msg in all_messages if not msg.is_spam]
+    
+    non_spam_messages.sort(key=lambda x: x.timestamp, reverse=True)
+    return non_spam_messages
 
-@app.post("/api/posts", response_model=Post, status_code=201)
+@app.post("/api/posts", response_model=Message, status_code=201)
 async def create_forum_post(post_data: CreatePostRequest):
-    """Creates a new forum post after checking for spam."""
+    """
+    Creates a new forum post.
+    It first classifies the post. If it's spam, it's saved to the DB
+    but an error is returned. If not, it's saved and returned.
+    """
     classifier = get_classifier()
     
     # Adapt the forum post to the format expected by the classifier
+    # Note: The classifier uses a different model (DevToPost). This is a bit awkward.
+    # For this example, we'll assume the text is the most important part.
+    # A more robust solution would unify the models.
     dev_to_post_format = DevToPost(
         id=int(time.time()),
-        title=post_data.title,
-        description=post_data.content,
-        user={"name": post_data.author}
+        title="Forum Post", # Title is not in our simple message model
+        description=post_data.content, # Using content as description
+        user={"name": "user"} # Author is not in our simple message model
     )
 
     # Classify the post
@@ -115,28 +125,29 @@ async def create_forum_post(post_data: CreatePostRequest):
     redis_client = get_redis()
     await redis_client.incr("stats:total_classified")
 
+    # Create the message object regardless of spam status
+    new_message = Message(
+        text=post_data.content,
+        is_spam=is_spam,
+        timestamp=datetime.now()
+    )
+    
+    # Save the message to Redis
+    message_id = str(int(time.time() * 1000))
+    await db.save_post(redis_client, message_id, new_message.model_dump_json())
+    logger.info(f"New message {message_id} saved with spam status: {is_spam}.")
+
     if is_spam:
         await redis_client.incr("stats:spam_detected")
         logger.warning(f"Spam detected (Confidence: {confidence:.2f}): {reasoning}")
+        # Raise error AFTER saving, so it exists for moderation
         raise HTTPException(
             status_code=403,
             detail=f"Post rejected as spam. Reason: {', '.join(reasoning)}"
         )
 
-    # If not spam, create and save the post
-    new_post = Post(
-        id=int(time.time() * 1000),
-        author=post_data.author,
-        title=post_data.title,
-        content=post_data.content,
-        timestamp=datetime.now()
-    )
-    
-    redis_client = get_redis()
-    await db.save_post(redis_client, str(new_post.id), new_post.model_dump_json())
-    logger.info(f"New post '{new_post.title}' by {new_post.author} created.")
-    
-    return new_post
+    # If not spam, return the created message
+    return new_message
 
 # --- Spam Guard Management API Routes ---
 @app.post("/api/train", status_code=202)
@@ -195,6 +206,74 @@ async def health_check():
         redis=redis_status,
         timestamp=datetime.now()
     )
+
+
+# --- Moderation API Routes ---
+
+@app.get("/moderation-panel", response_class=HTMLResponse)
+async def serve_moderation_panel(request: Request):
+    """Serves the moderation panel page."""
+    return templates.TemplateResponse("moderation.html", {"request": request})
+
+@app.get("/api/moderation", response_model=List[ModerationMessage])
+async def get_all_messages_for_moderation():
+    """Retrieves all messages, including spam, for the moderation panel."""
+    redis_client = get_redis()
+    posts_dict = await db.get_all_posts_with_ids(redis_client)
+    
+    messages = []
+    for post_id, post_json in posts_dict.items():
+        try:
+            message_data = Message.model_validate_json(post_json)
+            mod_message = ModerationMessage(
+                id=post_id,
+                text=message_data.text,
+                is_spam=message_data.is_spam,
+                timestamp=message_data.timestamp
+            )
+            messages.append(mod_message)
+        except Exception as e:
+            logger.error(f"Could not parse post with ID {post_id}. It might be in an old format. Error: {e}")
+            continue
+            
+    messages.sort(key=lambda x: x.timestamp, reverse=True)
+    return messages
+
+@app.post("/api/moderation/update/{message_id}", status_code=200)
+async def update_message_status(message_id: str, update_data: dict):
+    """Updates the spam status of a message."""
+    is_spam = update_data.get("is_spam")
+    if is_spam is None:
+        raise HTTPException(status_code=400, detail="Missing 'is_spam' field.")
+
+    redis_client = get_redis()
+    post_key = f"forum_post:{message_id}"
+    
+    post_json = await redis_client.get(post_key)
+    if not post_json:
+        raise HTTPException(status_code=404, detail="Message not found.")
+
+    # Assuming the stored model is `Message`
+    message = Message.model_validate_json(post_json)
+    message.is_spam = is_spam
+    
+    await redis_client.set(post_key, message.model_dump_json())
+    logger.info(f"Updated message {message_id} spam status to {is_spam}.")
+    return {"message": "Update successful", "id": message_id, "is_spam": is_spam}
+
+@app.delete("/api/moderation/delete/{message_id}", status_code=200)
+async def delete_message(message_id: str):
+    """Deletes a message from the database."""
+    redis_client = get_redis()
+    post_key = f"forum_post:{message_id}"
+    
+    deleted_count = await redis_client.delete(post_key)
+    if deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Message not found.")
+        
+    logger.info(f"Deleted message {message_id}.")
+    return {"message": "Delete successful", "id": message_id}
+
 
 if __name__ == "__main__":
     import uvicorn

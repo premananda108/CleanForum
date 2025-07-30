@@ -72,3 +72,16 @@ class HealthCheckResponse(BaseModel):
     status: str
     redis: str
     timestamp: datetime
+
+
+# --- Moderation Models ---
+
+class Message(BaseModel):
+    """Represents a message stored in Redis."""
+    text: str
+    is_spam: bool
+    timestamp: datetime
+
+class ModerationMessage(Message):
+    """Represents a message with its ID for the moderation panel."""
+    id: str
