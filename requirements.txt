@@ -7,3 +7,4 @@ pydantic
 aiohttp==3.9.5
 jinja2
 python-dotenv
+textblob==0.17.1
