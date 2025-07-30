@@ -8,3 +8,5 @@ venv/
 
 # PyCharm
 .idea/
+
+/training.log

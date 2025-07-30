@@ -37,6 +37,7 @@ class SpamClassifier:
         self.redis_client = redis_client
         self.model = ModelSingleton.get_instance()
         self.k = k
+        self.index_name = INDEX_NAME
 
     def _preprocess_text(self, text: Optional[str]) -> str:
         if not text: return ""
