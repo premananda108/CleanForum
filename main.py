@@ -6,6 +6,7 @@ import logging
 import time
 import json
 from datetime import datetime
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request, HTTPException, BackgroundTasks
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
@@ -22,24 +23,12 @@ from core.training import ModelTrainer
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-app = FastAPI(
-    title="CleanForum API",
-    description="A modern forum with integrated spam protection.",
-    version="1.0.0"
-)
-
-# Mount static files and templates
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
-
-# --- Global State ---
 # This dictionary will hold our application's state, like the Redis client and classifier
 app_state = {}
 
-# --- Startup and Shutdown Events ---
-@app.on_event("startup")
-async def startup_event():
-    """Initialize resources on application startup."""
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manages application startup and shutdown events."""
     logger.info("Application starting up...")
     redis_client = await db.RedisClient.get_instance()
     if redis_client:
@@ -53,14 +42,25 @@ async def startup_event():
         app_state["redis"] = None
         app_state["classifier"] = None
     logger.info("Startup complete.")
-
-@app.on_event("shutdown")
-async def shutdown_event():
-    """Clean up resources on application shutdown."""
+    
+    yield
+    
+    logger.info("Application shutting down...")
     if app_state.get("redis"):
         await app_state["redis"].close()
         logger.info("Redis connection closed.")
-    logger.info("Application shutting down.")
+    logger.info("Shutdown complete.")
+
+app = FastAPI(
+    title="CleanForum API",
+    description="A modern forum with integrated spam protection.",
+    version="1.0.0",
+    lifespan=lifespan
+)
+
+# Mount static files and templates
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
 
 # --- Helper Functions ---
 def get_classifier() -> SpamClassifier:
