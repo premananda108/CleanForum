@@ -27,9 +27,26 @@ import uvicorn
 from textblob import TextBlob
 import logging
 
+import logging
+from logging.handlers import RotatingFileHandler
+
 # Настройка логирования
-logging.basicConfig(level=logging.INFO)
+log_formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+
+# Настройка обработчика для файла
+log_file = 'logs/forum.log'
+file_handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5) # 10 MB per file, 5 backups
+file_handler.setFormatter(log_formatter)
+
+# Настройка обработчика для консоли
+console_handler = logging.StreamHandler()
+console_handler.setFormatter(log_formatter)
+
+# Получаем логгер и добавляем обработчики
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+logger.addHandler(file_handler)
+logger.addHandler(console_handler)
 
 
 # Модели данных
@@ -297,11 +314,11 @@ class ForumService:
 
         return User(
             user_id=user_id,
-            username=user_data['username'].decode(),
-            email=user_data['email'].decode(),
-            created_at=datetime.fromisoformat(user_data['created_at'].decode()),
-            reputation_score=float(user_data['reputation_score']),
-            is_banned=user_data['is_banned'].decode() == 'True'
+            username=user_data[b'username'].decode(),
+            email=user_data[b'email'].decode(),
+            created_at=datetime.fromisoformat(user_data[b'created_at'].decode()),
+            reputation_score=float(user_data[b'reputation_score']),
+            is_banned=user_data[b'is_banned'].decode() == 'True'
         )
 
     async def create_post(self, post_data: CreatePostRequest, user_id: str, ip_address: str) -> Post:
