@@ -119,10 +119,19 @@ class SpamClassifier:
         if not self.redis_client:
             return []
         try:
-            query = f"*=>[KNN {self.k} @vector $blob AS score]"
-            query_params = {"blob": query_vector.tobytes()}
+            # Correctly build the query using the Query class
+            from redis.commands.search.query import Query
             
-            results = await self.redis_client.ft(INDEX_NAME).search(query, query_params)
+            q = (
+                Query("*=>[KNN $k @vector $blob AS score]")
+                .sort_by("score")
+                .return_fields("id", "score", "title", "url", "label")
+                .dialect(2)
+            )
+            
+            query_params = {"k": self.k, "blob": query_vector.tobytes()}
+            
+            results = await self.redis_client.ft(INDEX_NAME).search(q, query_params)
             
             return [
                 {
@@ -152,7 +161,8 @@ class SpamClassifier:
             label_counts = Counter(labels)
             
             if not label_counts:
-                 # Fallback to heuristics if no labels found
+                 # This case should ideally not be hit if similar_posts is not empty,
+                 # but as a safeguard, we fall through to the cautious blocking below.
                  pass
             else:
                 predicted_label_str, count = label_counts.most_common(1)[0]
@@ -165,15 +175,10 @@ class SpamClassifier:
                 similar_posts_info = [SimilarPostInfo(**p) for p in similar_posts]
                 return is_spam, confidence, reasoning, similar_posts_info
 
-        # 2. Heuristic-based fallback
+        # 2. Cautious blocking if no similar posts are found
         spam_indicators = self._get_heuristic_spam_indicators(features)
-        num_indicators = len(spam_indicators)
-        
-        is_spam = num_indicators >= 2
-        confidence = min(0.5 + (num_indicators * 0.15), 0.9)
-        
-        reasoning = spam_indicators if spam_indicators else ["Heuristic analysis suggests the post is legitimate."]
-        if not self.redis_client:
-            reasoning.append("Warning: Redis is not connected, classification is based on heuristics only.")
-        
+        is_spam = True
+        confidence = 0.99  # High confidence because we are being cautious
+        reasoning = ["Post is too dissimilar from any known content.", "Blocked as a precaution."]
+        reasoning.extend(spam_indicators)
         return is_spam, confidence, reasoning, []

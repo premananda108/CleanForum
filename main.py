@@ -111,7 +111,12 @@ async def create_forum_post(post_data: CreatePostRequest):
     # Classify the post
     is_spam, confidence, reasoning, _ = await classifier.classify(dev_to_post_format)
 
+    # --- Update Statistics ---
+    redis_client = get_redis()
+    await redis_client.incr("stats:total_classified")
+
     if is_spam:
+        await redis_client.incr("stats:spam_detected")
         logger.warning(f"Spam detected (Confidence: {confidence:.2f}): {reasoning}")
         raise HTTPException(
             status_code=403,
@@ -135,15 +140,22 @@ async def create_forum_post(post_data: CreatePostRequest):
 
 # --- Spam Guard Management API Routes ---
 @app.post("/api/train", status_code=202)
-async def trigger_training(background_tasks: BackgroundTasks):
-    """Starts the model training process in the background."""
+async def trigger_training(background_tasks: BackgroundTasks, background: bool = True):
+    """
+    Starts the model training process.
+    By default, runs in the background. For testing, can be run in the foreground.
+    """
     classifier = get_classifier()
     trainer = ModelTrainer(classifier)
     
-    logger.info("Adding model training to background tasks.")
-    background_tasks.add_task(trainer.run_training_pipeline)
-    
-    return {"message": "Model training started in the background."}
+    if background:
+        logger.info("Adding model training to background tasks.")
+        background_tasks.add_task(trainer.run_training_pipeline)
+        return {"message": "Model training started in the background."}
+    else:
+        logger.info("Running model training in foreground for testing.")
+        result = await trainer.run_training_pipeline()
+        return {"message": "Model training completed.", "result": result}
 
 @app.get("/api/stats", response_model=StatsResponse)
 async def get_system_stats():
