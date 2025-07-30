@@ -78,9 +78,24 @@ document.addEventListener('DOMContentLoaded', () => {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                // Use the detailed error from the API
-                throw new Error(errorData.detail || 'Failed to submit post.');
+                let errorText = 'An unknown error occurred.';
+                try {
+                    const errorData = await response.json();
+                    // Check for FastAPI validation errors (HTTP 422)
+                    if (response.status === 422 && Array.isArray(errorData.detail)) {
+                        errorText = errorData.detail.map(err => {
+                            const field = err.loc[err.loc.length - 1];
+                            return `${field}: ${err.msg}`;
+                        }).join('; ');
+                    } else {
+                        // Handle other JSON errors (like spam filter)
+                        errorText = errorData.detail || JSON.stringify(errorData);
+                    }
+                } catch (e) {
+                    // Fallback for non-JSON error responses
+                    errorText = await response.text();
+                }
+                throw new Error(errorText);
             }
 
             // Clear form and refresh posts on success
@@ -88,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
             await fetchPosts();
 
         } catch (error) {
-            showError(`Error: ${error.message}`);
+            showError(error.message);
         } finally {
             submitButton.disabled = false;
             submitButton.textContent = 'Submit Post';
