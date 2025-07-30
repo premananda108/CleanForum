@@ -1,6 +1,19 @@
 version: '3.8'
 
 services:
+  web:
+    build: .
+    container_name: cleanforum_web
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    restart: unless-stopped
+
   redis:
     image: "redis:8.0.3-bookworm"
     container_name: cleanforum_redis
