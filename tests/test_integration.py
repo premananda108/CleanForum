@@ -6,7 +6,7 @@ import redis
 import time
 
 # Set the environment variable for the test Redis database BEFORE importing the app
-os.environ['REDIS_URL'] = 'redis://localhost:6381/1'
+os.environ['REDIS_URL'] = 'redis://localhost:6381/0'
 
 # Add project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
@@ -39,20 +39,20 @@ def test_health_check(client):
 def test_full_flow_with_training(client):
     """
     Tests the full flow:
-    1. Before training, posts are blocked because they are dissimilar.
+    1. Before training, a post is accepted because there's no baseline.
     2. Train the model synchronously.
     3. Post a legitimate message, which should now be accepted.
     4. Post a spam message, which should be blocked.
     5. Check that stats are updated correctly.
     """
-    # 1. Before training, check that a post is blocked
+    # 1. Before training, check that a post is accepted (no index yet)
     pre_train_response = client.post("/api/posts", json={
         "author": "testuser",
         "title": "A legit post",
         "content": "This is a normal discussion about Python."
     })
-    assert pre_train_response.status_code == 403
-    assert "Post is too dissimilar" in pre_train_response.json()["detail"]
+    assert pre_train_response.status_code == 201
+    assert pre_train_response.json()["title"] == "A legit post"
 
     # 2. Train the model in the foreground
     train_response = client.post("/api/train?background=false")
@@ -84,8 +84,8 @@ def test_full_flow_with_training(client):
     stats_response = client.get("/api/stats")
     assert stats_response.status_code == 200
     stats = stats_response.json()
-    # total_classified should be 3: one blocked before training, one legit, one spam
+    # total_classified should be 3: one accepted before training, one legit, one spam
     assert stats["total_classified"] == 3
-    # spam_detected should be 2: one dissimilar, one actual spam
-    assert stats["spam_detected"] == 2
+    # spam_detected should be 1: only the explicit spam message
+    assert stats["spam_detected"] == 1
     assert stats["vectors_in_db"] > 0
