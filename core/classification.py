@@ -1,21 +1,21 @@
 """
-Core logic for spam classification.
+Core logic for spam classification, based on the proven solution from /samples.
 """
 import logging
 import re
 import numpy as np
 from sentence_transformers import SentenceTransformer
 import asyncio
-import aiohttp
+from redis.asyncio import Redis
 from collections import Counter
 from typing import List, Optional, Dict, Any, Tuple
-from redis.asyncio import Redis
+from redis.commands.search.query import Query
 
 from models import DevToPost, SimilarPostInfo
 
 # --- Globals ---
 logger = logging.getLogger(__name__)
-VECTOR_DIM = 384 + 3  # 384 from model, 3 from numeric features
+VECTOR_DIM = 384 + 3
 INDEX_NAME = "spam_vectors"
 INDEX_PREFIX = "post_vector:"
 
@@ -39,16 +39,13 @@ class SpamClassifier:
         self.k = k
 
     def _preprocess_text(self, text: Optional[str]) -> str:
-        """Cleans up text for processing."""
-        if not text:
-            return ""
+        if not text: return ""
         text = re.sub(r'<[^>]+>', '', text)
         text = re.sub(r'http[s]?://\S+', '', text)
         text = re.sub(r'\s+', ' ', text)
         return text.lower().strip()
 
     def _get_heuristic_spam_indicators(self, features: Dict[str, Any]) -> List[str]:
-        """Determines spam indicators based on simple rules."""
         indicators = []
         if features.get('reading_time', 0) < 2 and features.get('reactions_count', 0) < 5:
             indicators.append("Short post with low engagement")
@@ -70,7 +67,6 @@ class SpamClassifier:
         return indicators
 
     async def _vectorize_post(self, post: DevToPost) -> tuple[np.ndarray, Dict[str, Any]]:
-        """Creates a vector from a post's features."""
         features = {
             'title': self._preprocess_text(post.title),
             'description': self._preprocess_text(post.description),
@@ -82,19 +78,7 @@ class SpamClassifier:
             'user_id': post.user.get('id') if post.user else None
         }
 
-        # --- Feature Enrichment (Example: fetching user followers) ---
-        user_id = features.get('user_id')
-        if user_id:
-            try:
-                async with aiohttp.ClientSession() as session:
-                    async with session.get(f"https://dev.to/api/users/{user_id}") as response:
-                        if response.status == 200:
-                            user_data = await response.json()
-                            features['user_followers'] = user_data.get('followers_count', 0)
-            except Exception as e:
-                logger.warning(f"Could not fetch user data for user {user_id}: {e}")
-
-        # --- Vector Creation ---
+        # Vector Creation
         combined_text = f"{features['title']} {features['description']}"
         
         loop = asyncio.get_event_loop()
@@ -106,7 +90,6 @@ class SpamClassifier:
             len(features['tags'])
         ], dtype=np.float32)
         
-        # Normalize numeric features to prevent them from overpowering the text vector
         norm = np.linalg.norm(numeric_features)
         if norm > 0:
             numeric_features = numeric_features / norm
@@ -115,56 +98,49 @@ class SpamClassifier:
         return final_vector.astype(np.float32), features
 
     async def _find_similar_posts_in_redis(self, query_vector: np.ndarray) -> List[Dict[str, Any]]:
-        """Finds similar posts in Redis using vector search."""
         if not self.redis_client:
             return []
         try:
-            # Correctly build the query using the Query class
-            from redis.commands.search.query import Query
-            
-            q = (
-                Query("*=>[KNN $k @vector $blob AS score]")
-                .sort_by("score")
-                .return_fields("id", "score", "title", "url", "label")
-                .dialect(2)
+            # This is the proven method from the samples
+            query = (
+                f"*=>[KNN {self.k} @vector $blob AS score]"
+            )
+            results = await self.redis_client.execute_command(
+                "FT.SEARCH", self.index_name, query, 
+                "PARAMS", "2", "blob", query_vector.tobytes(), 
+                "DIALECT", "2", 
+                "RETURN", "5", "score", "title", "url", "label", "id"
             )
             
-            query_params = {"k": self.k, "blob": query_vector.tobytes()}
+            similar_posts = []
+            # Response: [count, doc1_id, [fields1], doc2_id, [fields2], ...]
+            for i in range(1, len(results), 2):
+                doc_id = results[i]
+                fields = results[i+1]
+                fields_dict = {fields[j]: fields[j+1] for j in range(0, len(fields), 2)}
+                
+                similar_posts.append({
+                    "post_id": doc_id.split(':')[-1],
+                    "score": 1 - float(fields_dict.get('score', 1.0)),
+                    "title": fields_dict.get('title', 'No Title'),
+                    "url": fields_dict.get('url', ''),
+                    "label": fields_dict.get('label', 'unknown')
+                })
+            return similar_posts
             
-            results = await self.redis_client.ft(INDEX_NAME).search(q, query_params)
-            
-            return [
-                {
-                    "post_id": doc.id.split(':')[-1],
-                    "score": 1 - float(doc.score),  # Convert cosine distance to similarity
-                    "title": doc.title,
-                    "url": doc.url,
-                    "label": doc.label
-                } for doc in results.docs
-            ]
         except Exception as e:
-            logger.error(f"Redis search failed: {e}")
+            # If the index doesn't exist, Redis throws an error. We catch it here.
+            logger.error(f"Redis search failed. This is expected if the index doesn't exist yet. Error: {e}")
             return []
 
     async def classify(self, post: DevToPost) -> Tuple[bool, float, List[str], List[SimilarPostInfo]]:
-        """
-        Classifies a post as spam or not.
-        Returns: (is_spam, confidence, reasoning, similar_posts_info)
-        """
         query_vector, features = await self._vectorize_post(post)
         similar_posts = await self._find_similar_posts_in_redis(query_vector)
         
-        # --- Decision Logic ---
-        # 1. Vector-based classification (if similar posts are found)
         if similar_posts:
-            labels = [p['label'] for p in similar_posts]
-            label_counts = Counter(labels)
-            
-            if not label_counts:
-                 # This case should ideally not be hit if similar_posts is not empty,
-                 # but as a safeguard, we fall through to the cautious blocking below.
-                 pass
-            else:
+            labels = [p['label'] for p in similar_posts if p['label'] != 'unknown']
+            if labels:
+                label_counts = Counter(labels)
                 predicted_label_str, count = label_counts.most_common(1)[0]
                 is_spam = (predicted_label_str == "spam")
                 confidence = count / len(labels)
@@ -175,10 +151,10 @@ class SpamClassifier:
                 similar_posts_info = [SimilarPostInfo(**p) for p in similar_posts]
                 return is_spam, confidence, reasoning, similar_posts_info
 
-        # 2. Cautious blocking if no similar posts are found
+        # Fallback if no similar posts with known labels are found
         spam_indicators = self._get_heuristic_spam_indicators(features)
         is_spam = True
-        confidence = 0.99  # High confidence because we are being cautious
+        confidence = 0.99
         reasoning = ["Post is too dissimilar from any known content.", "Blocked as a precaution."]
         reasoning.extend(spam_indicators)
         return is_spam, confidence, reasoning, []

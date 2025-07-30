@@ -6,7 +6,7 @@ import redis
 import time
 
 # Set the environment variable for the test Redis database BEFORE importing the app
-os.environ['REDIS_URL'] = 'redis://localhost:6380/0'
+os.environ['REDIS_URL'] = 'redis://localhost:6381/1'
 
 # Add project root to the Python path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
