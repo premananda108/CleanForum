@@ -154,8 +154,16 @@ class SpamClassifier:
 
         # Fallback if no similar posts with known labels are found
         spam_indicators = self._get_heuristic_spam_indicators(features)
-        is_spam = True
-        confidence = 0.99
-        reasoning = ["Post is too dissimilar from any known content.", "Blocked as a precaution."]
-        reasoning.extend(spam_indicators)
+
+        # If no similar posts are found, rely on heuristics. Default to NOT SPAM.
+        if "Contains spam keywords" in spam_indicators:
+            is_spam = True
+            confidence = 0.80
+            reasoning = ["Classified as spam based on keywords (no similar posts found)."]
+            reasoning.extend(spam_indicators)
+        else:
+            is_spam = False
+            confidence = 0.95
+            reasoning = ["Allowed: No similar posts found and no strong spam indicators."]
+
         return is_spam, confidence, reasoning, []
