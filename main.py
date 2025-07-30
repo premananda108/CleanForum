@@ -25,7 +25,6 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 import uvicorn
 from textblob import TextBlob
-import logging
 
 import logging
 from logging.handlers import RotatingFileHandler
