@@ -164,6 +164,86 @@ async function loadCategories() {
     }
 }
 
+// Post Detail page functions
+async function loadPostDetail(postId) {
+    try {
+        const post = await api.getPost(postId);
+        const container = document.getElementById('post-detail-container');
+        const metaContainer = document.getElementById('post-meta-container');
+
+        document.title = `${post.title} - CleanForum`;
+
+        container.innerHTML = `
+            <div class="card">
+                <div class="card-body">
+                    <h1>${post.title}</h1>
+                    <hr>
+                    <div class="text-muted mb-3">
+                        <span><i class="fas fa-user"></i> ${post.author_username}</span> |
+                        <span><i class="fas fa-clock"></i> ${timeAgo(post.created_at)}</span> |
+                        <span><i class="fas fa-eye"></i> ${post.view_count}</span>
+                    </div>
+                    <div class="post-content">${post.content.replace(/\n/g, '<br>')}</div>
+                </div>
+            </div>
+        `;
+
+        metaContainer.innerHTML = `
+            <p><strong>Категория:</strong> <a href="/category/${post.category_id}">${post.category_name}</a></p>
+            <p><strong>Теги:</strong> ${post.tags.map(tag => `<span class="badge bg-secondary">${tag}</span>`).join(' ')}</p>
+            <p><strong>Оценка спама:</strong> ${getSpamBadge(post.is_spam, post.spam_score)}</p>
+        `;
+
+        await loadComments(postId);
+
+    } catch (error) {
+        console.error('Error loading post detail:', error);
+        document.getElementById('post-detail-container').innerHTML = '<div class="alert alert-danger">Ошибка загрузки поста.</div>';
+    }
+}
+
+async function loadComments(postId) {
+    try {
+        const comments = await api.getPostComments(postId);
+        const container = document.getElementById('comments-container');
+
+        if (comments.length === 0) {
+            container.innerHTML = '<p class="text-muted">Комментариев пока нет.</p>';
+            return;
+        }
+
+        container.innerHTML = comments.map(comment => `
+            <div class="border-bottom pb-3 mb-3">
+                <p>${comment.content}</p>
+                <small class="text-muted"><strong>${comment.author_username}</strong> • ${timeAgo(comment.created_at)}</small>
+            </div>
+        `).join('');
+
+    } catch (error) {
+        console.error('Error loading comments:', error);
+    }
+}
+
+async function handleCommentForm(postId) {
+    const form = document.getElementById('add-comment-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const content = document.getElementById('comment-content').value;
+
+        try {
+            await api.createComment({ post_id: postId, content: content });
+            showAlert('Комментарий успешно добавлен!', 'success');
+            document.getElementById('comment-content').value = '';
+            await loadComments(postId); // Перезагружаем комментарии
+        } catch (error) {
+            console.error('Error creating comment:', error);
+            showAlert('Ошибка при добавлении комментария.', 'danger');
+        }
+    });
+}
+
 // Moderator functions
 async function loadPendingPosts() {
     try {
