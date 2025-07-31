@@ -58,9 +58,19 @@ class Post:
 
     @staticmethod
     async def create(post_data: PostCreate, author_id: str) -> str:
-        """Создать новый пост"""
+        """Создать новый пост с немедленным анализом на спам."""
         post_id = str(uuid.uuid4())
         now = datetime.now()
+
+        # Сначала проводим анализ, чтобы получить оценку спама
+        from services.vector_classifier import vector_classifier
+        analysis_results = await vector_classifier.analyze_with_vectors(
+            post_id, post_data.title, post_data.content, post_data.tags, author_id
+        )
+
+        is_spam = analysis_results.get("is_spam", False)
+        spam_score = analysis_results.get("spam_score", 0.0)
+        status = PostStatus.SPAM if is_spam else PostStatus.PUBLISHED
 
         post_info = {
             "id": post_id,
@@ -69,41 +79,27 @@ class Post:
             "category_id": post_data.category_id,
             "author_id": author_id,
             "tags": json.dumps(post_data.tags),
-            "status": PostStatus.PUBLISHED.value,
+            "status": status.value,
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
             "view_count": 0,
             "comment_count": 0,
             "vote_score": 0,
-            "is_spam": False,
-            "spam_score": 0.0,
+            "is_spam": str(is_spam),
+            "spam_score": spam_score,
             "reading_time": Post.calculate_reading_time(post_data.content)
         }
 
-        # Сохраняем пост
-        await db.hset(f"post:{post_id}", post_info)
-
-        # Добавляем в индексы
-        timestamp = now.timestamp()
-        await db.zadd("posts:all", {post_id: timestamp})
-        await db.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
-        await db.zadd(f"posts:author:{author_id}", {post_id: timestamp})
-
-        # Запускаем анализ на спам сразу при создании
-        from services.vector_classifier import vector_classifier
-        analysis_results = await vector_classifier.analyze_with_vectors(
-            post_id, post_data.title, post_data.content, post_data.tags, author_id
-        )
-
-        # Обновляем пост результатами анализа
-        await db.hset(f"post:{post_id}", {
-            "is_spam": str(analysis_results.get("is_spam", False)),
-            "spam_score": analysis_results.get("spam_score", 0.0)
-        })
-
-        # Если анализ показал, что это спам, добавляем в счетчик
-        if analysis_results.get("is_spam"): 
-            await db.sadd("posts:spam", post_id)
+        # Сохраняем пост и его анализ в одной транзакции
+        async with db.redis_client.pipeline(transaction=True) as pipe:
+            pipe.hset(f"post:{post_id}", mapping=post_info)
+            timestamp = now.timestamp()
+            pipe.zadd("posts:all", {post_id: timestamp})
+            pipe.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
+            pipe.zadd(f"posts:author:{author_id}", {post_id: timestamp})
+            if is_spam:
+                pipe.sadd("posts:spam", post_id)
+            await pipe.execute()
 
         return post_id
 

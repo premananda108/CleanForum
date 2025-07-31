@@ -36,26 +36,10 @@ async def create_post(
     # Создаем пост
     try:
         post_id = await Post.create(post_data, current_user)
-        logging.info(f"Пост {post_id} успешно создан в базе данных.")
+        logging.info(f"Пост {post_id} успешно создан и проанализирован.")
     except Exception as e:
         logging.error(f"Ошибка при создании поста в БД: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка при создании поста")
-
-    # Анализируем на спам
-    spam_analysis = {}  # Инициализируем переменную на случай ошибки анализа
-    try:
-        spam_analysis = await vector_classifier.analyze_with_vectors(
-            post_id, post_data.title, post_data.content, post_data.tags, current_user
-        )
-        logging.info(f"Анализ на спам для поста {post_id} завершен. Результат: {spam_analysis.get('is_spam')}")
-    except Exception as e:
-        logging.error(f"Ошибка при анализе на спам поста {post_id}: {e}", exc_info=True)
-        # Продолжаем выполнение, даже если анализ на спам не удался
-
-    # Если пост определен как спам, помечаем его
-    if spam_analysis.get("is_spam", False):
-        await Post.mark_as_spam(post_id, spam_analysis.get("spam_score", 1.0), True)
-        logging.warning(f"Пост {post_id} помечен как спам.")
 
     # Обновляем счетчик постов в категории
     await Category.update_post_count(post_data.category_id, 1)
