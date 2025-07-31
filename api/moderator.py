@@ -7,10 +7,16 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 import json
 from datetime import datetime
+
+from config import settings
 from models.database import db
 from models.post import Post, PostResponse, PostStatus
 from services.vector_classifier import vector_classifier
 from services.spam_detector import spam_detector
+from services.redis_manager import vector_manager
+import sys
+import platform
+from fastapi import __version__ as fastapi_version
 
 router = APIRouter()
 
@@ -210,3 +216,28 @@ async def reanalyze_post(post_id: str):
         "analysis": analysis,
         "updated": True
     }
+
+@router.get("/system-stats")
+async def get_system_stats():
+    """Получить системную статистику и информацию о приложении."""
+    logging.info("Запрос системной статистики")
+    try:
+        redis_info = await db.get_server_info()
+        vector_index_info = await vector_manager.get_index_info()
+        total_posts = await Post.count_all()
+        spam_posts = await Post.count_spam()
+
+        return {
+            "redis_version": redis_info.get("redis_version"),
+            "total_system_memory": redis_info.get("total_system_memory_human"),
+            "used_memory": redis_info.get("used_memory_human"),
+            "total_posts": total_posts,
+            "spam_posts": spam_posts,
+            "vector_count": vector_index_info.get("num_docs", 0),
+            "python_version": platform.python_version(),
+            "fastapi_version": fastapi_version,
+            "app_version": settings.APP_VERSION
+        }
+    except Exception as e:
+        logging.error(f"Ошибка при сборе системной статистики: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Не удалось собрать статистику")

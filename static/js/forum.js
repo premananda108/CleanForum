@@ -67,6 +67,10 @@ class ForumAPI {
         return this.request(`/moderator/posts/${postId}/analysis`);
     }
 
+    async getSystemStats() {
+        return this.request('/moderator/system-stats');
+    }
+
     async retrainModel() {
         return this.request('/moderator/retrain', { method: 'POST' });
     }
@@ -242,6 +246,46 @@ async function handleCommentForm(postId) {
             showAlert('Ошибка при добавлении комментария.', 'danger');
         }
     });
+}
+
+async function loadSystemStats() {
+    try {
+        const stats = await api.getSystemStats();
+        const container = document.getElementById('system-stats');
+
+        container.innerHTML = `
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Версия Redis
+                    <span class="badge bg-primary rounded-pill">${stats.redis_version}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Всего постов
+                    <span class="badge bg-info rounded-pill">${stats.total_posts}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Постов в спаме
+                    <span class="badge bg-danger rounded-pill">${stats.spam_posts}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Векторов в базе
+                    <span class="badge bg-success rounded-pill">${stats.vector_count}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Версия Python
+                    <span class="badge bg-secondary rounded-pill">${stats.python_version}</span>
+                </li>
+                 <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Версия FastAPI
+                    <span class="badge bg-secondary rounded-pill">${stats.fastapi_version}</span>
+                </li>
+            </ul>
+        `;
+
+    } catch (error) {
+        console.error('Error loading system stats:', error);
+        document.getElementById('system-stats').innerHTML = '<div class="alert alert-danger">Ошибка загрузки статистики.</div>';
+    }
 }
 
 // Moderator functions
@@ -450,5 +494,6 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (path === '/moderator') {
         loadPendingPosts();
         loadSpamStatistics();
+        loadSystemStats();
     }
 });

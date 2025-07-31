@@ -202,3 +202,13 @@ class Post:
 
         new_count = int(post_data.get("comment_count", 0)) + delta
         await db.hset(f"post:{post_id}", {"comment_count": max(0, new_count)})
+
+    @staticmethod
+    async def count_all() -> int:
+        """Подсчитать общее количество постов."""
+        return await db.zcard("posts:all")
+
+    @staticmethod
+    async def count_spam() -> int:
+        """Подсчитать количество спам-постов."""
+        return await db.scard("posts:spam")

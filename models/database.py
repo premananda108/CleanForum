@@ -76,5 +76,25 @@ class RedisDatabase:
         """Получить элементы из отсортированного множества (по убыванию)"""
         return await self.redis_client.zrevrange(key, start, end, withscores=withscores)
 
+    async def zcard(self, key: str) -> int:
+        """Получить количество элементов в отсортированном множестве."""
+        return await self.redis_client.zcard(key)
+
+    async def get_server_info(self) -> Dict[str, Any]:
+        """Получить информацию о сервере Redis"""
+        return await self.redis_client.info()
+
+    async def scard(self, key: str) -> int:
+        """Получить количество элементов в множестве"""
+        return await self.redis_client.scard(key)
+
+    async def sadd(self, key: str, *values: str) -> int:
+        """Добавить элементы в множество"""
+        return await self.redis_client.sadd(key, *values)
+
+    async def srem(self, key: str, *values: str) -> int:
+        """Удалить элементы из множества"""
+        return await self.redis_client.srem(key, *values)
+
 # Глобальный экземпляр базы данных
 db = RedisDatabase()
