@@ -422,7 +422,7 @@ async function moderatePost(postId, action) {
         showAlert(result.message, alertType);
 
         // Перезагружаем список
-        await loadPendingPosts();
+        await loadModeratorPosts();
 
     } catch (error) {
         console.error('Error moderating post:', error);
