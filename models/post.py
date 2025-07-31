@@ -205,6 +205,11 @@ class Post:
             "status": status
         })
 
+        if is_spam:
+            await db.sadd("posts:spam", post_id)
+        else:
+            await db.srem("posts:spam", post_id)
+
     @staticmethod
     async def update_comment_count(post_id: str, delta: int = 1):
         """Обновить количество комментариев"""
