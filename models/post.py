@@ -89,6 +89,22 @@ class Post:
         await db.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
         await db.zadd(f"posts:author:{author_id}", {post_id: timestamp})
 
+        # Запускаем анализ на спам сразу при создании
+        from services.vector_classifier import vector_classifier
+        analysis_results = await vector_classifier.analyze_with_vectors(
+            post_id, post_data.title, post_data.content, post_data.tags, author_id
+        )
+
+        # Обновляем пост результатами анализа
+        await db.hset(f"post:{post_id}", {
+            "is_spam": str(analysis_results.get("is_spam", False)),
+            "spam_score": analysis_results.get("spam_score", 0.0)
+        })
+
+        # Если анализ показал, что это спам, добавляем в счетчик
+        if analysis_results.get("is_spam"): 
+            await db.sadd("posts:spam", post_id)
+
         return post_id
 
     @staticmethod
