@@ -314,6 +314,45 @@ function showAlert(message, type = 'info') {
     }, 5000);
 }
 
+// Create Post page functions
+async function loadCategoriesIntoSelect() {
+    try {
+        const categories = await api.getCategories();
+        const select = document.getElementById('post-category');
+        select.innerHTML = categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
+    } catch (error) {
+        console.error('Error loading categories for select:', error);
+    }
+}
+
+async function handleCreatePostForm() {
+    const form = document.getElementById('create-post-form');
+    if (!form) return;
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        const postData = {
+            title: document.getElementById('post-title').value,
+            content: document.getElementById('post-content').value,
+            category_id: document.getElementById('post-category').value,
+            tags: document.getElementById('post-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
+        };
+
+        try {
+            const newPost = await api.createPost(postData);
+            showAlert('Пост успешно создан!', 'success');
+            // Перенаправляем на страницу поста через 2 секунды
+            setTimeout(() => {
+                window.location.href = `/posts/${newPost.id}`;
+            }, 2000);
+        } catch (error) {
+            console.error('Error creating post:', error);
+            showAlert('Ошибка при создании поста. Проверьте консоль.', 'danger');
+        }
+    });
+}
+
 // Initialize page content
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
@@ -321,6 +360,9 @@ document.addEventListener('DOMContentLoaded', function() {
     if (path === '/') {
         loadPosts();
         loadCategories();
+    } else if (path.startsWith('/create')) {
+        loadCategoriesIntoSelect();
+        handleCreatePostForm();
     } else if (path === '/moderator') {
         loadPendingPosts();
         loadSpamStatistics();
