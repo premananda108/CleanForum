@@ -14,10 +14,19 @@
     <div class="col-md-6">
         <div class="card">
             <div class="card-header">
-                <h5><i class="fas fa-list-alt"></i> Все посты</h5>
+                <h5><i class="fas fa-list-alt"></i> Посты на модерации</h5>
             </div>
-            <div class="card-body" id="pending-posts">
+            <div class="card-body" id="pending-posts" style="max-height: 600px; overflow-y: auto;">
                 <!-- Посты для модерации -->
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-comments"></i> Комментарии на модерации</h5>
+            </div>
+            <div class="card-body" id="pending-comments" style="max-height: 600px; overflow-y: auto;">
+                <!-- Комментарии для модерации -->
             </div>
         </div>
     </div>
@@ -85,4 +94,7 @@
         </div>
     </div>
 </div>
+
+{% block scripts %}
+<script src="/static/js/moderator.js"></script>
 {% endblock %}

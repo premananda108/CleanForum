@@ -84,7 +84,7 @@ class SpamDetector:
             reasons.append(f"Слишком много заглавных букв ({capital_ratio:.1%})")
 
         # 5. Анализ повторяющихся символов
-        repeated_chars = re.findall(r'(.){3,}', combined_text)
+        repeated_chars = re.findall(r'(.)\1{3,}', combined_text)
         if repeated_chars:
             score += 0.1
             reasons.append("Найдены повторяющиеся символы")
@@ -119,32 +119,85 @@ class SpamDetector:
             "user_age_days": user_age_days
         }
 
-    async def analyze_post(self, post_id: str, title: str, content: str, 
+    def calculate_comment_spam_score(self, content: str, author_id: str, user_age_days: int) -> Dict[str, Any]:
+        """Рассчитать оценку спама для комментария (упрощенная версия)"""
+        text = content.lower()
+        score = 0.0
+        reasons = []
+
+        # 1. Ключевые слова
+        keyword_score = 0
+        for category, keywords in self.spam_keywords.items():
+            found = [kw for kw in keywords if kw in text]
+            if found:
+                keyword_score += len(found) * 0.25
+                reasons.append(f"Найдены спам-слова ({category}): {', '.join(found)}")
+        score += min(keyword_score, 0.5)
+
+        # 2. Паттерны
+        pattern_count = sum(1 for pattern in self.suspicious_patterns if re.search(pattern, text))
+        if pattern_count > 0:
+            score += min(pattern_count * 0.15, 0.3)
+            reasons.append(f"Найдено {pattern_count} подозрительных паттернов")
+
+        # 3. Структура
+        if len(content) < 15:
+            score += 0.15
+            reasons.append("Слишком короткий комментарий")
+        if len(content) > 2000:
+            score += 0.1
+            reasons.append("Слишком длинный комментарий")
+
+        # 4. Заглавные буквы
+        capital_ratio = sum(1 for c in content if c.isupper()) / max(len(content), 1)
+        if capital_ratio > 0.4:
+            score += 0.25
+            reasons.append(f"Слишком много заглавных букв ({capital_ratio:.1%})")
+
+        # 5. Возраст пользователя
+        if user_age_days < settings.MIN_USER_AGE_DAYS:
+            score += 0.3
+            reasons.append(f"Новый пользователь (возраст: {user_age_days} дней)")
+
+        final_score = min(max(score, 0.0), 1.0)
+        return {
+            "spam_score": final_score,
+            "is_spam": final_score >= settings.SPAM_THRESHOLD,
+            "reasons": reasons,
+            "user_age_days": user_age_days
+        }
+
+    async def analyze_post(self, post_id: str, title: str, content: str,
                           tags: List[str], author_id: str) -> Dict[str, Any]:
         """Анализировать пост на спам"""
         logging.info(f"Запуск эвристического анализа для поста {post_id}")
-
-        # Получаем возраст пользователя
         user_age_days = await User.get_user_age_days(author_id)
-
-        # Рассчитываем оценку спама
         result = self.calculate_spam_score(title, content, tags, author_id, user_age_days)
         logging.info(f"Эвристический анализ для поста {post_id} завершен. Оценка: {result['spam_score']:.2f}")
 
-        # Сохраняем результат анализа
-        analysis_key = f"spam_analysis:{post_id}"
-        analysis_data = {
-            "post_id": post_id,
-            "author_id": author_id,
-            "spam_score": result["spam_score"],
-            "is_spam": result["is_spam"],
-            "reasons": json.dumps(result["reasons"]),
-            "analyzed_at": datetime.now().isoformat(),
-            "user_age_days": result["user_age_days"]
-        }
+        # Сохраняем результат
+        analysis_key = f"spam_analysis:post:{post_id}"
+        await db.hset(analysis_key, {
+            "entity_id": post_id, "type": "post", "author_id": author_id,
+            "spam_score": result["spam_score"], "is_spam": str(result["is_spam"]),
+            "reasons": json.dumps(result["reasons"]), "analyzed_at": datetime.now().isoformat()
+        })
+        return result
 
-        await db.hset(analysis_key, analysis_data)
+    async def analyze_comment(self, comment_id: str, content: str, author_id: str) -> Dict[str, Any]:
+        """Анализировать комментарий на спам"""
+        logging.info(f"Запуск эвристического анализа для комментария {comment_id}")
+        user_age_days = await User.get_user_age_days(author_id)
+        result = self.calculate_comment_spam_score(content, author_id, user_age_days)
+        logging.info(f"Эвристический анализ для комментария {comment_id} завершен. Оценка: {result['spam_score']:.2f}")
 
+        # Сохраняем результат
+        analysis_key = f"spam_analysis:comment:{comment_id}"
+        await db.hset(analysis_key, {
+            "entity_id": comment_id, "type": "comment", "author_id": author_id,
+            "spam_score": result["spam_score"], "is_spam": str(result["is_spam"]),
+            "reasons": json.dumps(result["reasons"]), "analyzed_at": datetime.now().isoformat()
+        })
         return result
 
     async def get_spam_statistics(self) -> Dict[str, Any]:

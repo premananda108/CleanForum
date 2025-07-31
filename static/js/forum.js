@@ -69,21 +69,36 @@ class ForumAPI {
         return this.request('/moderator/pending-posts');
     }
 
-    
-
     async moderatePost(postId, action) {
-        return this.request('/moderator/moderate', {
+        return this.request('/moderator/moderate-post', {
             method: 'POST',
             body: JSON.stringify({
-                post_id: postId,
-                action: action,
-                moderator_id: 'moderator_demo'
+                entity_id: postId,
+                action: action
             })
         });
     }
 
-    async getSpamAnalysis(postId) {
+    async getPostSpamAnalysis(postId) {
         return this.request(`/moderator/posts/${postId}/analysis`);
+    }
+
+    async getPendingComments() {
+        return this.request('/moderator/pending-comments');
+    }
+
+    async moderateComment(commentId, action) {
+        return this.request('/moderator/moderate-comment', {
+            method: 'POST',
+            body: JSON.stringify({
+                entity_id: commentId,
+                action: action
+            })
+        });
+    }
+
+    async getCommentSpamAnalysis(commentId) {
+        return this.request(`/moderator/comments/${commentId}/analysis`);
     }
 
     async getSystemStats() {
@@ -307,203 +322,6 @@ function renderSimilarPosts(posts) {
     `;
 }
 
-async function loadStats() {
-    try {
-        const stats = await api.getSystemStats();
-        const contentContainer = document.getElementById('content-stats');
-        const systemContainer = document.getElementById('system-stats');
-
-        // Заполняем статистику по контенту
-        contentContainer.innerHTML = `
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Всего постов
-                    <span class="badge bg-primary rounded-pill">${stats.total_posts}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Опубликованных
-                    <span class="badge bg-success rounded-pill">${stats.published_posts}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    В спаме
-                    <span class="badge bg-danger rounded-pill">${stats.spam_posts}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Процент спама
-                    <span class="badge bg-warning rounded-pill">${stats.spam_percentage}%</span>
-                </li>
-            </ul>
-        `;
-
-        // Заполняем системную статистику
-        systemContainer.innerHTML = `
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия Redis
-                    <span class="badge bg-secondary rounded-pill">${stats.redis_version}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Используемая память
-                    <span class="badge bg-info rounded-pill">${stats.used_memory}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Количество векторов
-                    <span class="badge bg-success rounded-pill">${stats.vector_count}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия Python
-                    <span class="badge bg-dark rounded-pill">${stats.python_version}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия FastAPI
-                    <span class="badge bg-dark rounded-pill">${stats.fastapi_version}</span>
-                </li>
-                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия приложения
-                    <span class="badge bg-dark rounded-pill">${stats.app_version}</span>
-                </li>
-            </ul>
-        `;
-
-    } catch (error) {
-        console.error('Error loading stats:', error);
-        document.getElementById('content-stats').innerHTML = '<div class="alert alert-danger">Ошибка загрузки статистики.</div>';
-        document.getElementById('system-stats').innerHTML = '<div class="alert alert-danger">Ошибка загрузки статистики.</div>';
-    }
-}
-
-// Moderator functions
-async function loadModeratorPosts() {
-    try {
-        const posts = await api.getPendingPosts();
-        const container = document.getElementById('pending-posts');
-
-        if (posts.length === 0) {
-            container.innerHTML = '<p class="text-success">Нет постов для модерации</p>';
-            return;
-        }
-
-        container.innerHTML = posts.map(post => `
-            <div class="border p-3 mb-3 rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6>
-                            <a href="/posts/${post.id}" target="_blank" class="text-decoration-none">${post.title}</a>
-                        </h6>
-                        <p class="small text-muted">${post.content.substring(0, 100)}...</p>
-                        <div>
-                            ${getSpamBadge(post.is_spam, post.spam_score)}
-                            <span class="small text-muted">Оценка: ${(post.spam_score * 100).toFixed(1)}%</span>
-                        </div>
-                    </div>
-                    <div class="btn-group-vertical btn-group-sm">
-                        <button class="btn btn-success" onclick="moderatePost('${post.id}', 'approve')">
-                            <i class="fas fa-check"></i>
-                        </button>
-                        <button class="btn btn-danger" onclick="moderatePost('${post.id}', 'mark_spam')">
-                            <i class="fas fa-ban"></i>
-                        </button>
-                        <button class="btn btn-info" onclick="showSpamAnalysis('${post.id}')">
-                            <i class="fas fa-search"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-
-    } catch (error) {
-        console.error('Error loading pending posts:', error);
-    }
-}
-
-
-
-async function moderatePost(postId, action) {
-    try {
-        const result = await api.moderatePost(postId, action);
-
-        // Показываем уведомление
-        const alertType = action === 'approve' ? 'success' : 'warning';
-        showAlert(result.message, alertType);
-
-        // Перезагружаем список
-        await loadModeratorPosts();
-
-    } catch (error) {
-        console.error('Error moderating post:', error);
-        showAlert('Ошибка модерации', 'danger');
-    }
-}
-
-async function showSpamAnalysis(postId) {
-    try {
-        const analysis = await api.getSpamAnalysis(postId);
-        const content = document.getElementById('spam-analysis-content');
-
-        content.innerHTML = `
-            <div class="row">
-                <div class="col-md-6">
-                    <h6>Общая оценка</h6>
-                    <p>Оценка спама: <strong>${(analysis.spam_score * 100).toFixed(1)}%</strong></p>
-                    <p>Статус: ${getSpamBadge(analysis.is_spam, analysis.spam_score)}</p>
-                </div>
-                <div class="col-md-6">
-                    <h6>Детали анализа</h6>
-                    <p>Эвристика: ${(analysis.heuristic_score * 100).toFixed(1)}%</p>
-                    <p>Векторный: ${(analysis.vector_score * 100).toFixed(1)}%</p>
-                    <p>Похожих постов: ${analysis.similar_posts_count}</p>
-                </div>
-            </div>
-            <div class="mt-3">
-                <h6>Причины подозрения:</h6>
-                <ul>
-                    ${analysis.reasons.map(reason => `<li>${reason}</li>`).join('')}
-                </ul>
-            </div>
-        `;
-
-        const modal = new bootstrap.Modal(document.getElementById('spamAnalysisModal'));
-        modal.show();
-
-    } catch (error) {
-        console.error('Error loading spam analysis:', error);
-    }
-}
-
-async function analyzeAllPosts() {
-    try {
-        const result = await api.analyzeAllPosts();
-        showAlert(result.message, 'info');
-    } catch (error) {
-        console.error('Error analyzing all posts:', error);
-        showAlert('Ошибка запуска анализа', 'danger');
-    }
-}
-
-async function retrainModel() {
-    try {
-        const result = await api.retrainModel();
-        showAlert(result.message, 'info');
-    } catch (error) {
-        console.error('Error retraining model:', error);
-        showAlert('Ошибка запуска переобучения', 'danger');
-    }
-}
-
-async function showLogs() {
-    try {
-        const logs = await api.getLogs();
-        const content = document.getElementById('logs-content');
-        content.textContent = logs;
-
-        const modal = new bootstrap.Modal(document.getElementById('logsModal'));
-        modal.show();
-
-    } catch (error) {
-        console.error('Error loading logs:', error);
-        showAlert('Ошибка загрузки логов', 'danger');
-    }
-}
 
 function showAlert(message, type = 'info') {
     const alertDiv = document.createElement('div');
@@ -653,9 +471,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const postId = path.split('/').pop();
         loadPostDetail(postId);
         handleCommentForm(postId);
-    } else if (path === '/moderator') {
-        loadModeratorPosts();
-        loadStats();
     } else if (path.startsWith('/search')) {
         handleSearchForm();
     }

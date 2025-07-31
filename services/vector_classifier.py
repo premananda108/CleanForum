@@ -79,10 +79,11 @@ class VectorSpamClassifier:
 
         # 6. Сохраняем вектор поста в базу (для обучения будущих классификаций)
         label = "spam" if final_result["is_spam"] else "legitimate"
-        await vector_manager.add_vector(post_id, post_vector, label, title, content[:500])
+        vector_doc_id = f"post:{post_id}"
+        await vector_manager.add_vector(vector_doc_id, post_vector, label, "post", f"{title} - {content[:500]}")
 
         # 7. Сохраняем полный результат анализа
-        await self._save_analysis_result(post_id, final_result)
+        await self._save_analysis_result(post_id, final_result, "post")
 
         return final_result
 
@@ -165,13 +166,14 @@ class VectorSpamClassifier:
             "user_age_days": heuristic.get("user_age_days", 0)
         }
 
-    async def _save_analysis_result(self, post_id: str, result: Dict[str, Any]):
-        """Сохранить результат анализа"""
-        analysis_key = f"vector_analysis:{post_id}"
+    async def _save_analysis_result(self, entity_id: str, result: Dict[str, Any], entity_type: str):
+        """Сохранить результат анализа (для поста или комментария)"""
+        analysis_key = f"vector_analysis:{entity_type}:{entity_id}"
         analysis_data = {
-            "post_id": post_id,
+            "entity_id": entity_id,
+            "type": entity_type,
             "spam_score": result["spam_score"],
-            "is_spam": result["is_spam"],
+            "is_spam": str(result["is_spam"]),
             "heuristic_score": result["heuristic_score"],
             "vector_score": result["vector_score"],
             "vector_prediction": result["vector_prediction"],
@@ -180,26 +182,53 @@ class VectorSpamClassifier:
             "reasons": json.dumps(result["reasons"]),
             "analyzed_at": datetime.now().isoformat()
         }
+        await db.hset(analysis_key, mapping=analysis_data)
 
-        await db.hset(analysis_key, analysis_data)
+    async def analyze_comment(self, comment_id: str, content: str, author_id: str) -> Dict[str, Any]:
+        """Анализ комментария с использованием векторного поиска."""
+        # 1. Эвристический анализ
+        heuristic_result = await spam_detector.analyze_comment(comment_id, content, author_id)
 
-    async def retrain_with_feedback(self, post_id: str, is_spam: bool, moderator_id: str):
+        # 2. Создаем вектор
+        comment_vector = self.create_vector("", content, []) # Нет заголовка и тегов
+
+        # 3. Ищем похожие
+        similar_items = await vector_manager.search_similar(comment_vector, k=7)
+
+        # 4. Классифицируем
+        vector_result = await self._classify_by_similarity(similar_items)
+
+        # 5. Комбинируем
+        final_result = self._combine_results(heuristic_result, vector_result)
+
+        # 6. Сохраняем вектор
+        label = "spam" if final_result["is_spam"] else "legitimate"
+        # Используем префикс, чтобы отличать векторы комментариев
+        vector_doc_id = f"comment:{comment_id}"
+        await vector_manager.add_vector(vector_doc_id, comment_vector, label, "comment", content[:500])
+
+        # 7. Сохраняем результат анализа
+        await self._save_analysis_result(comment_id, final_result, "comment")
+
+        return final_result
+
+    async def retrain_with_feedback(self, entity_id: str, entity_type: str, is_spam: bool, moderator_id: str):
         """Переобучение на основе обратной связи модератора"""
-        logging.info(f"💡 Получена обратная связь для поста {post_id} от модератора {moderator_id}: {'спам' if is_spam else 'не спам'}")
-        # Сохраняем обратную связь
-        feedback_key = f"feedback:{post_id}"
-        feedback_data = {
-            "post_id": post_id,
-            "is_spam": is_spam,
+        logging.info(f"💡 Получена обратная связь для {entity_type} {entity_id} от модератора {moderator_id}: {'спам' if is_spam else 'не спам'}")
+        feedback_key = f"feedback:{entity_type}:{entity_id}"
+        await db.hset(feedback_key, mapping={
+            "entity_id": entity_id,
+            "type": entity_type,
+            "is_spam": str(is_spam),
             "moderator_id": moderator_id,
             "feedback_at": datetime.now().isoformat()
-        }
-
-        await db.hset(feedback_key, feedback_data)
+        })
 
         # Обновляем метку в векторной базе
-        # В реальной реализации здесь можно было бы обновить существующий вектор
-        logging.info(f"Обратная связь для поста {post_id} сохранена.")
+        vector_doc_id = f"{entity_type}:{entity_id}"
+        new_label = "spam" if is_spam else "legitimate"
+        # (В реальной системе здесь может быть более сложная логика обновления)
+        logging.info(f"Обратная связь для {entity_type} {entity_id} сохранена. Метка для вектора {vector_doc_id} должна быть обновлена на '{new_label}'.")
 
     async def get_classification_stats(self) -> Dict[str, Any]:
         """Получить статистику классификации"""

@@ -10,7 +10,8 @@ from datetime import datetime
 
 from config import settings
 from models.database import db
-from models.post import Post, PostResponse, PostStatus
+from models.post import Post, PostResponse
+from models.comment import Comment, CommentResponse
 from services.vector_classifier import vector_classifier
 from services.spam_detector import spam_detector
 from services.redis_manager import vector_manager
@@ -20,13 +21,14 @@ from fastapi import __version__ as fastapi_version
 
 router = APIRouter()
 
+# --- Модели данных для API ---
 class ModerationAction(BaseModel):
-    post_id: str
-    action: str  # "approve", "mark_spam", "delete"
+    entity_id: str
+    action: str  # "approve", "mark_spam"
     moderator_id: str = "moderator_demo"
 
 class SpamAnalysisResponse(BaseModel):
-    post_id: str
+    entity_id: str
     spam_score: float
     is_spam: bool
     reasons: List[str]
@@ -35,81 +37,95 @@ class SpamAnalysisResponse(BaseModel):
     vector_prediction: str
     vector_confidence: float
     similar_posts_count: int
-    spam_neighbors: int
-    legitimate_neighbors: int
-    analyzed_at: str
+    analyzed_at: Optional[str] = None
+
+# --- Эндпоинты для постов ---
 
 @router.get("/pending-posts", response_model=List[PostResponse])
 async def get_pending_posts(limit: int = Query(50, le=100)):
     """Получить все посты для модерации."""
-    posts = await Post.get_all_for_moderation(limit=limit)
-    return posts
-
-
+    return await Post.get_all_for_moderation(limit=limit)
 
 @router.get("/posts/{post_id}/analysis", response_model=SpamAnalysisResponse)
-async def get_detailed_analysis(post_id: str):
-    """Получить детальный анализ спама для поста"""
-
-    # Получаем данные анализа
-    analysis_data = await db.hgetall(f"vector_analysis:{post_id}")
+async def get_post_analysis(post_id: str):
+    """Получить детальный анализ спама для поста."""
+    analysis_data = await db.hgetall(f"vector_analysis:post:{post_id}")
     if not analysis_data:
-        raise HTTPException(status_code=404, detail="Анализ не найден. Запустите анализ для всех постов.")
-
-    # Получаем причины из JSON
-    reasons = json.loads(analysis_data.get("reasons", "[]"))
+        raise HTTPException(status_code=404, detail="Анализ для поста не найден.")
 
     return SpamAnalysisResponse(
-        post_id=analysis_data["post_id"],
+        entity_id=analysis_data.get("entity_id"),
         spam_score=float(analysis_data.get("spam_score", 0)),
         is_spam=analysis_data.get("is_spam") == "True",
-        reasons=reasons,
+        reasons=json.loads(analysis_data.get("reasons", "[]")),
         heuristic_score=float(analysis_data.get("heuristic_score", 0)),
         vector_score=float(analysis_data.get("vector_score", 0)),
         vector_prediction=analysis_data.get("vector_prediction", "unknown"),
         vector_confidence=float(analysis_data.get("vector_confidence", 0)),
         similar_posts_count=int(analysis_data.get("similar_posts_count", 0)),
-        spam_neighbors=0, 
-        legitimate_neighbors=0, 
-        analyzed_at=analysis_data.get("analyzed_at", "")
+        analyzed_at=analysis_data.get("analyzed_at")
     )
 
-@router.post("/moderate")
+@router.post("/moderate-post")
 async def moderate_post(action: ModerationAction):
-    """Выполнить действие модерации"""
-
-    post = await Post.get_by_id(action.post_id)
+    """Выполнить действие модерации над постом."""
+    post = await Post.get_by_id(action.entity_id)
     if not post:
         raise HTTPException(status_code=404, detail="Пост не найден")
 
     if action.action == "approve":
-        # Помечаем как легитимный
-        await Post.mark_as_spam(action.post_id, 0.0, False)
-
-        # Сохраняем обратную связь для обучения
-        await vector_classifier.retrain_with_feedback(
-            action.post_id, False, action.moderator_id
-        )
-
-        return {"message": "Пост одобрен", "action": "approved"}
-
+        await Post.mark_as_spam(action.entity_id, 0.0, False)
+        await vector_classifier.retrain_with_feedback(action.entity_id, "post", False, action.moderator_id)
+        return {"message": "Пост одобрен"}
     elif action.action == "mark_spam":
-        # Помечаем как спам
-        await Post.mark_as_spam(action.post_id, 1.0, True)
+        await Post.mark_as_spam(action.entity_id, 1.0, True)
+        await vector_classifier.retrain_with_feedback(action.entity_id, "post", True, action.moderator_id)
+        return {"message": "Пост помечен как спам"}
+    else:
+        raise HTTPException(status_code=400, detail="Неизвестное действие")
 
-        # Сохраняем обратную связь для обучения
-        await vector_classifier.retrain_with_feedback(
-            action.post_id, True, action.moderator_id
-        )
+# --- Эндпоинты для комментариев ---
 
-        return {"message": "Пост помечен как спам", "action": "marked_spam"}
+@router.get("/pending-comments", response_model=List[CommentResponse])
+async def get_pending_comments(limit: int = Query(50, le=100)):
+    """Получить все комментарии для модерации."""
+    return await Comment.get_all_for_moderation(limit=limit)
 
-    elif action.action == "delete":
-        # Удаляем пост
-        await Post.mark_as_spam(action.post_id, 0.0, False)
+@router.get("/comments/{comment_id}/analysis", response_model=SpamAnalysisResponse)
+async def get_comment_analysis(comment_id: str):
+    """Получить детальный анализ спама для комментария."""
+    analysis_data = await db.hgetall(f"vector_analysis:comment:{comment_id}")
+    if not analysis_data:
+        raise HTTPException(status_code=404, detail="Анализ для комментария не найден.")
 
-        return {"message": "Пост удален", "action": "deleted"}
+    return SpamAnalysisResponse(
+        entity_id=analysis_data.get("entity_id"),
+        spam_score=float(analysis_data.get("spam_score", 0)),
+        is_spam=analysis_data.get("is_spam") == "True",
+        reasons=json.loads(analysis_data.get("reasons", "[]")),
+        heuristic_score=float(analysis_data.get("heuristic_score", 0)),
+        vector_score=float(analysis_data.get("vector_score", 0)),
+        vector_prediction=analysis_data.get("vector_prediction", "unknown"),
+        vector_confidence=float(analysis_data.get("vector_confidence", 0)),
+        similar_posts_count=int(analysis_data.get("similar_posts_count", 0)),
+        analyzed_at=analysis_data.get("analyzed_at")
+    )
 
+@router.post("/moderate-comment")
+async def moderate_comment(action: ModerationAction):
+    """Выполнить действие модерации над комментарием."""
+    comment = await Comment.get_by_id(action.entity_id)
+    if not comment:
+        raise HTTPException(status_code=404, detail="Комментарий не найден")
+
+    if action.action == "approve":
+        await Comment.mark_as_spam(action.entity_id, 0.0, False)
+        await vector_classifier.retrain_with_feedback(action.entity_id, "comment", False, action.moderator_id)
+        return {"message": "Комментарий одобрен"}
+    elif action.action == "mark_spam":
+        await Comment.mark_as_spam(action.entity_id, 1.0, True)
+        await vector_classifier.retrain_with_feedback(action.entity_id, "comment", True, action.moderator_id)
+        return {"message": "Комментарий помечен как спам"}
     else:
         raise HTTPException(status_code=400, detail="Неизвестное действие")
 
@@ -213,16 +229,26 @@ async def get_system_stats():
     try:
         redis_info = await db.get_server_info()
         vector_index_info = await vector_manager.get_index_info()
+
+        # Статистика по постам
         total_posts = await Post.count_all()
         spam_posts = await Post.count_spam()
-        published_posts = total_posts - spam_posts
-        spam_percentage = (spam_posts / total_posts * 100) if total_posts > 0 else 0
+
+        # Статистика по комментариям
+        total_comments = await Comment.count_all()
+        spam_comments = await Comment.count_spam()
+
+        # Общая статистика
+        total_content = total_posts + total_comments
+        total_spam = spam_posts + spam_comments
+        spam_percentage = (total_spam / total_content * 100) if total_content > 0 else 0
 
         return {
             # Статистика контента
             "total_posts": total_posts,
-            "published_posts": published_posts,
             "spam_posts": spam_posts,
+            "total_comments": total_comments,
+            "spam_comments": spam_comments,
             "spam_percentage": round(spam_percentage, 2),
             
             # Системная информация
