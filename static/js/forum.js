@@ -443,6 +443,10 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (path.startsWith('/create')) {
         loadCategoriesIntoSelect();
         handleCreatePostForm();
+    } else if (path.startsWith('/posts/')) {
+        const postId = path.split('/').pop();
+        loadPostDetail(postId);
+        handleCommentForm(postId);
     } else if (path === '/moderator') {
         loadPendingPosts();
         loadSpamStatistics();
