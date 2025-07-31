@@ -2,6 +2,7 @@
 API роуты для работы с постами
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
+import logging
 from typing import List, Optional
 from models.post import Post, PostCreate, PostUpdate, PostResponse
 from models.category import Category
@@ -23,23 +24,37 @@ async def create_post(
     current_user: str = Depends(get_current_user_id)
 ):
     """Создать новый пост"""
+    logging.info(f"Попытка создания поста от пользователя {current_user}")
+    logging.debug(f"Данные поста: {post_data.model_dump_json()}")
 
     # Проверяем существование категории
     category = await Category.get_by_id(post_data.category_id)
     if not category:
+        logging.warning(f"Категория {post_data.category_id} не найдена.")
         raise HTTPException(status_code=404, detail="Категория не найдена")
 
     # Создаем пост
-    post_id = await Post.create(post_data, current_user)
+    try:
+        post_id = await Post.create(post_data, current_user)
+        logging.info(f"Пост {post_id} успешно создан в базе данных.")
+    except Exception as e:
+        logging.error(f"Ошибка при создании поста в БД: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка при создании поста")
 
     # Анализируем на спам
-    spam_analysis = await vector_classifier.analyze_with_vectors(
-        post_id, post_data.title, post_data.content, post_data.tags, current_user
-    )
+    try:
+        spam_analysis = await vector_classifier.analyze_with_vectors(
+            post_id, post_data.title, post_data.content, post_data.tags, current_user
+        )
+        logging.info(f"Анализ на спам для поста {post_id} завершен. Результат: {spam_analysis['is_spam']}")
+    except Exception as e:
+        logging.error(f"Ошибка при анализе на спам поста {post_id}: {e}", exc_info=True)
+        # Продолжаем выполнение, даже если анализ на спам не удался
 
     # Если пост определен как спам, помечаем его
-    if spam_analysis["is_spam"]:
-        await Post.mark_as_spam(post_id, spam_analysis["spam_score"], True)
+    if spam_analysis.get("is_spam", False):
+        await Post.mark_as_spam(post_id, spam_analysis.get("spam_score", 1.0), True)
+        logging.warning(f"Пост {post_id} помечен как спам.")
 
     # Обновляем счетчик постов в категории
     await Category.update_post_count(post_data.category_id, 1)
@@ -47,8 +62,10 @@ async def create_post(
     # Получаем созданный пост
     post = await Post.get_by_id(post_id)
     if not post:
+        logging.error(f"Не удалось получить пост {post_id} после создания.")
         raise HTTPException(status_code=500, detail="Ошибка создания поста")
 
+    logging.info(f"Пост {post_id} успешно обработан и возвращен клиенту.")
     return post
 
 @router.get("/posts", response_model=List[PostResponse])

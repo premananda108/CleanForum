@@ -13,11 +13,11 @@
                 <form id="create-post-form">
                     <div class="mb-3">
                         <label for="post-title" class="form-label">Заголовок</label>
-                        <input type="text" class="form-control" id="post-title" required>
+                        <input type="text" class="form-control" id="post-title" required minlength="5">
                     </div>
                     <div class="mb-3">
                         <label for="post-content" class="form-label">Содержание</label>
-                        <textarea class="form-control" id="post-content" rows="10" required></textarea>
+                        <textarea class="form-control" id="post-content" rows="10" required minlength="10"></textarea>
                     </div>
                     <div class="row">
                         <div class="col-md-6 mb-3">

@@ -7,8 +7,11 @@ from typing import Optional
 class Settings:
     # Основные настройки
     APP_NAME: str = "CleanForum"
-    APP_VERSION: str = "1.0.0"
-    DEBUG: bool = True
+    APP_VERSION: str = "0.1.0"
+    RELOAD: bool = True
+
+    # Настройки логирования
+    LOG_FILE: str = "logs/forum.log"
 
     # Redis настройки
     REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
