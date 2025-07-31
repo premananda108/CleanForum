@@ -24,6 +24,19 @@ async def lifespan(app: FastAPI):
     # Инициализируем векторный классификатор
     await vector_classifier.initialize()
 
+    # Создаем категории по умолчанию, если их нет
+    from models.category import Category, CategoryCreate
+    existing_categories = await Category.get_all()
+    if not existing_categories:
+        print("Создаем категории по умолчанию")
+        default_categories = [
+            CategoryCreate(name="Общие", description="Разговоры на любые темы"),
+            CategoryCreate(name="Технологии", description="Все о высоких технологиях"),
+            CategoryCreate(name="Флуд", description="Для несерьезных обсуждений")
+        ]
+        for cat_data in default_categories:
+            await Category.create(cat_data)
+
     yield
 
     # Завершение
@@ -104,3 +117,12 @@ async def health_check():
         "app": settings.APP_NAME,
         "version": settings.APP_VERSION
     }
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host=settings.HOST,
+        port=settings.PORT,
+        reload=settings.RELOAD
+    )
