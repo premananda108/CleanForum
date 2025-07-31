@@ -7,6 +7,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
+from logging_config import setup_logging
+
+# Настраиваем логирование до создания приложения
+setup_logging()
 
 from config import settings
 from models.database import db

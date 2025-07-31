@@ -1,18 +1,26 @@
 import logging
 import sys
 from logging.handlers import RotatingFileHandler
+from pathlib import Path
 from config import settings
 
 def setup_logging():
     """Настройка системы логирования."""
+    # Проверяем, были ли уже добавлены обработчики, чтобы избежать дублирования
+    if logging.getLogger().hasHandlers():
+        return
+
     log_formatter = logging.Formatter(
         '%(asctime)s - %(levelname)s - %(name)s - %(module)s:%(lineno)d - %(message)s'
     )
-    log_file = settings.LOG_FILE
+    
+    # Создаем абсолютный путь к файлу лога
+    log_file_path = Path(settings.LOG_FILE)
+    log_file_path.parent.mkdir(parents=True, exist_ok=True) # Создаем директорию, если ее нет
 
     # Настройка файлового обработчика с ротацией
     file_handler = RotatingFileHandler(
-        log_file,
+        log_file_path,
         maxBytes=5*1024*1024,  # 5 MB
         backupCount=2,
         encoding='utf-8'
