@@ -159,6 +159,18 @@ class Post:
         return posts
 
     @staticmethod
+    async def get_all_for_moderation(limit: int = 50, offset: int = 0) -> List[PostResponse]:
+        """Получить все посты для модерации, включая спам."""
+        post_ids = await db.zrevrange("posts:all", offset, offset + limit - 1)
+
+        posts = []
+        for post_id in post_ids:
+            post = await Post.get_by_id(post_id)
+            if post:
+                posts.append(post)
+        return posts
+
+    @staticmethod
     async def update(post_id: str, post_data: PostUpdate) -> bool:
         """Обновить пост"""
         existing_data = await db.hgetall(f"post:{post_id}")

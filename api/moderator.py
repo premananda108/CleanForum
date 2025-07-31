@@ -42,7 +42,7 @@ class SpamAnalysisResponse(BaseModel):
 @router.get("/pending-posts", response_model=List[PostResponse])
 async def get_pending_posts(limit: int = Query(50, le=100)):
     """Получить все посты для модерации."""
-    posts = await Post.get_all(limit=limit)
+    posts = await Post.get_all_for_moderation(limit=limit)
     return posts
 
 @router.get("/spam-statistics")
