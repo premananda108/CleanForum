@@ -53,6 +53,9 @@ class Comment:
         await db.zadd(f"comments:post:{comment_data.post_id}", {comment_id: timestamp})
         await db.zadd(f"comments:author:{author_id}", {comment_id: timestamp})
 
+        # Обновляем счетчик комментариев в посте
+        await db.hincrby(f"post:{comment_data.post_id}", "comment_count", 1)
+
         return comment_id
 
     @staticmethod

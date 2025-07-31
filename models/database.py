@@ -55,6 +55,10 @@ class RedisDatabase:
         """Получить все поля хеша"""
         return await self.redis_client.hgetall(key)
 
+    async def hincrby(self, key: str, field: str, amount: int = 1) -> int:
+        """Увеличить значение поля в хеше"""
+        return await self.redis_client.hincrby(key, field, amount)
+
     async def delete(self, *keys: str) -> int:
         """Удалить ключи"""
         return await self.redis_client.delete(*keys)
