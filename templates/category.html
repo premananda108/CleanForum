@@ -26,6 +26,7 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}  {# Это добавит скрипты из base.html, включая forum.js #}
 <script>
     document.addEventListener('DOMContentLoaded', async function() {
         const categoryId = "{{ category.id }}";

@@ -57,19 +57,15 @@ async def create_post(
 async def get_posts(
     limit: int = Query(20, le=100),
     offset: int = Query(0, ge=0),
-    category_id: Optional[str] = Query(None)
+    category_id: Optional[str] = None
 ):
     """Получить список постов"""
-    logging.info(f"Запрос постов: limit={limit}, offset={offset}, category_id={category_id}")
 
     if category_id:
-        logging.info(f"Фильтрация постов по категории: {category_id}")
         posts = await Post.get_by_category(category_id, limit, offset)
     else:
-        logging.info("Получение всех постов")
         posts = await Post.get_all(limit, offset)
 
-    logging.info(f"Найдено {len(posts)} постов.")
     return posts
 
 @router.get("/posts/{post_id}", response_model=PostResponse)

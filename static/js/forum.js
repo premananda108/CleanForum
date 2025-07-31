@@ -24,7 +24,6 @@ class ForumAPI {
 
     // Posts API
     async getPosts(limit = 20, offset = 0, categoryId = null) {
-        console.log(`Запрос постов: limit=${limit}, offset=${offset}, categoryId=${categoryId}`);
         let endpoint = `/posts?limit=${limit}&offset=${offset}`;
         if (categoryId) {
             endpoint += `&category_id=${categoryId}`;
