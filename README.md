@@ -56,7 +56,6 @@ pip install -r requirements.txt
 #### Вариант 1: Docker
 ```bash
 # Запускаем Redis с Vector Search
-#docker run -d --name redis-stack -p 6379:6379 redis/redis-stack:latest
 docker run -d --name cleanforum -p 6379:6379 redis:8.0.3-bookworm
 ```
 
