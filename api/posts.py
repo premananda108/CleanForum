@@ -42,11 +42,12 @@ async def create_post(
         raise HTTPException(status_code=500, detail="Внутренняя ошибка при создании поста")
 
     # Анализируем на спам
+    spam_analysis = {}  # Инициализируем переменную на случай ошибки анализа
     try:
         spam_analysis = await vector_classifier.analyze_with_vectors(
             post_id, post_data.title, post_data.content, post_data.tags, current_user
         )
-        logging.info(f"Анализ на спам для поста {post_id} завершен. Результат: {spam_analysis['is_spam']}")
+        logging.info(f"Анализ на спам для поста {post_id} завершен. Результат: {spam_analysis.get('is_spam')}")
     except Exception as e:
         logging.error(f"Ошибка при анализе на спам поста {post_id}: {e}", exc_info=True)
         # Продолжаем выполнение, даже если анализ на спам не удался
