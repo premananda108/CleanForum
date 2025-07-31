@@ -281,13 +281,19 @@ class Post:
         """Полнотекстовый поиск постов с использованием RediSearch."""
 
         # Экранируем спецсимволы, которые могут сломать запрос RediSearch
-        # Каждое слово в запросе оборачиваем в `*` для поиска по префиксу
-        # и соединяем их через `|` для поиска любого из слов.
         terms = query.replace("-", "\\-").split()
-        clean_query = "|".join([f"*{term}*" for term in terms])
 
-        # Запрос ищет любое из слов в заголовке или контенте.
-        redis_query = f"@(title,content):({clean_query})"
+        # Для каждого слова создаем отдельный блок запроса для поиска в обоих полях
+        # например, (@title:word*|@content:word*)
+        sub_queries = []
+        for term in terms:
+            if term: # Пропускаем пустые строки, если есть двойные пробелы
+                sub_queries.append(f"(@title:{term}*|@content:{term}*)")
+
+        # Объединяем подзапросы через ИЛИ
+        if not sub_queries:
+            return []
+        redis_query = "|".join(sub_queries)
 
         try:
             # Выполняем поиск, возвращая только doc_id
