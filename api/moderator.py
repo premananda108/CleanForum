@@ -41,22 +41,9 @@ class SpamAnalysisResponse(BaseModel):
 
 @router.get("/pending-posts", response_model=List[PostResponse])
 async def get_pending_posts(limit: int = Query(50, le=100)):
-    """Получить посты, требующие модерации"""
-
-    # Получаем все посты и фильтруем подозрительные
+    """Получить все посты для модерации."""
     posts = await Post.get_all(limit=limit)
-    pending_posts = []
-
-    for post in posts:
-        # Проверяем, есть ли анализ спама
-        analysis_data = await db.hgetall(f"vector_analysis:{post.id}")
-        if analysis_data:
-            spam_score = float(analysis_data.get("spam_score", 0))
-            # Включаем посты с высокой оценкой спама или помеченные как спам
-            if spam_score > 0.3 or post.is_spam:
-                pending_posts.append(post)
-
-    return pending_posts
+    return posts
 
 @router.get("/spam-statistics")
 async def get_spam_statistics():

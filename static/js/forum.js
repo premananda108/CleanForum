@@ -289,13 +289,13 @@ async function loadSystemStats() {
 }
 
 // Moderator functions
-async function loadPendingPosts() {
+async function loadModeratorPosts() {
     try {
         const posts = await api.getPendingPosts();
         const container = document.getElementById('pending-posts');
 
         if (posts.length === 0) {
-            container.innerHTML = '<p class="text-success">Нет подозрительных постов</p>';
+            container.innerHTML = '<p class="text-success">Нет постов для модерации</p>';
             return;
         }
 
@@ -492,7 +492,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadPostDetail(postId);
         handleCommentForm(postId);
     } else if (path === '/moderator') {
-        loadPendingPosts();
+        loadModeratorPosts();
         loadSpamStatistics();
         loadSystemStats();
     }
