@@ -45,29 +45,7 @@ async def get_pending_posts(limit: int = Query(50, le=100)):
     posts = await Post.get_all_for_moderation(limit=limit)
     return posts
 
-@router.get("/spam-statistics")
-async def get_spam_statistics():
-    """Получить статистику спама"""
 
-    # Получаем статистику классификатора
-    classifier_stats = await vector_classifier.get_classification_stats()
-
-    # Получаем статистику детектора
-    detector_stats = await spam_detector.get_spam_statistics()
-
-    # Считаем общую статистику (заглушка для демо)
-    total_posts = 0
-    spam_posts = 0
-
-    # В реальном приложении здесь будут запросы к Redis
-    return {
-        "total_posts_analyzed": total_posts,
-        "spam_detected": spam_posts,
-        "spam_rate": spam_posts / max(total_posts, 1),
-        "classifier_stats": classifier_stats,
-        "detector_stats": detector_stats,
-        "last_updated": datetime.now().isoformat()
-    }
 
 @router.get("/posts/{post_id}/analysis", response_model=SpamAnalysisResponse)
 async def get_detailed_analysis(post_id: str):
@@ -237,13 +215,19 @@ async def get_system_stats():
         vector_index_info = await vector_manager.get_index_info()
         total_posts = await Post.count_all()
         spam_posts = await Post.count_spam()
+        published_posts = total_posts - spam_posts
+        spam_percentage = (spam_posts / total_posts * 100) if total_posts > 0 else 0
 
         return {
-            "redis_version": redis_info.get("redis_version"),
-            "total_system_memory": redis_info.get("total_system_memory_human"),
-            "used_memory": redis_info.get("used_memory_human"),
+            # Статистика контента
             "total_posts": total_posts,
+            "published_posts": published_posts,
             "spam_posts": spam_posts,
+            "spam_percentage": round(spam_percentage, 2),
+            
+            # Системная информация
+            "redis_version": redis_info.get("redis_version"),
+            "used_memory": redis_info.get("used_memory_human"),
             "vector_count": vector_index_info.get("num_docs", 0),
             "python_version": platform.python_version(),
             "fastapi_version": fastapi_version,

@@ -48,9 +48,7 @@ class ForumAPI {
         return this.request('/moderator/pending-posts');
     }
 
-    async getSpamStatistics() {
-        return this.request('/moderator/spam-statistics');
-    }
+    
 
     async moderatePost(postId, action) {
         return this.request('/moderator/moderate', {
@@ -252,42 +250,67 @@ async function handleCommentForm(postId) {
     });
 }
 
-async function loadSystemStats() {
+async function loadStats() {
     try {
         const stats = await api.getSystemStats();
-        const container = document.getElementById('system-stats');
+        const contentContainer = document.getElementById('content-stats');
+        const systemContainer = document.getElementById('system-stats');
 
-        container.innerHTML = `
+        // Заполняем статистику по контенту
+        contentContainer.innerHTML = `
             <ul class="list-group list-group-flush">
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия Redis
-                    <span class="badge bg-primary rounded-pill">${stats.redis_version}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
                     Всего постов
-                    <span class="badge bg-info rounded-pill">${stats.total_posts}</span>
+                    <span class="badge bg-primary rounded-pill">${stats.total_posts}</span>
                 </li>
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Постов в спаме
+                    Опубликованных
+                    <span class="badge bg-success rounded-pill">${stats.published_posts}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    В спаме
                     <span class="badge bg-danger rounded-pill">${stats.spam_posts}</span>
                 </li>
                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Векторов в базе
+                    Процент спама
+                    <span class="badge bg-warning rounded-pill">${stats.spam_percentage}%</span>
+                </li>
+            </ul>
+        `;
+
+        // Заполняем системную статистику
+        systemContainer.innerHTML = `
+            <ul class="list-group list-group-flush">
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Версия Redis
+                    <span class="badge bg-secondary rounded-pill">${stats.redis_version}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Используемая память
+                    <span class="badge bg-info rounded-pill">${stats.used_memory}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Количество векторов
                     <span class="badge bg-success rounded-pill">${stats.vector_count}</span>
                 </li>
                 <li class="list-group-item d-flex justify-content-between align-items-center">
                     Версия Python
-                    <span class="badge bg-secondary rounded-pill">${stats.python_version}</span>
+                    <span class="badge bg-dark rounded-pill">${stats.python_version}</span>
+                </li>
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    Версия FastAPI
+                    <span class="badge bg-dark rounded-pill">${stats.fastapi_version}</span>
                 </li>
                  <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия FastAPI
-                    <span class="badge bg-secondary rounded-pill">${stats.fastapi_version}</span>
+                    Версия приложения
+                    <span class="badge bg-dark rounded-pill">${stats.app_version}</span>
                 </li>
             </ul>
         `;
 
     } catch (error) {
-        console.error('Error loading system stats:', error);
+        console.error('Error loading stats:', error);
+        document.getElementById('content-stats').innerHTML = '<div class="alert alert-danger">Ошибка загрузки статистики.</div>';
         document.getElementById('system-stats').innerHTML = '<div class="alert alert-danger">Ошибка загрузки статистики.</div>';
     }
 }
@@ -307,7 +330,9 @@ async function loadModeratorPosts() {
             <div class="border p-3 mb-3 rounded">
                 <div class="d-flex justify-content-between align-items-start">
                     <div>
-                        <h6>${post.title}</h6>
+                        <h6>
+                            <a href="/posts/${post.id}" target="_blank" class="text-decoration-none">${post.title}</a>
+                        </h6>
                         <p class="small text-muted">${post.content.substring(0, 100)}...</p>
                         <div>
                             ${getSpamBadge(post.is_spam, post.spam_score)}
@@ -334,35 +359,7 @@ async function loadModeratorPosts() {
     }
 }
 
-async function loadSpamStatistics() {
-    try {
-        const stats = await api.getSpamStatistics();
-        const container = document.getElementById('spam-statistics');
 
-        container.innerHTML = `
-            <div class="row text-center">
-                <div class="col-6">
-                    <h4>${stats.total_posts_analyzed}</h4>
-                    <small class="text-muted">Проанализировано</small>
-                </div>
-                <div class="col-6">
-                    <h4>${stats.spam_detected}</h4>
-                    <small class="text-muted">Спам заблокирован</small>
-                </div>
-            </div>
-            <hr>
-            <div class="mt-3">
-                <strong>Статус модели:</strong><br>
-                <span class="badge ${stats.classifier_stats.model_loaded ? 'bg-success' : 'bg-danger'}">
-                    ${stats.classifier_stats.model_loaded ? 'Загружена' : 'Не загружена'}
-                </span>
-            </div>
-        `;
-
-    } catch (error) {
-        console.error('Error loading spam statistics:', error);
-    }
-}
 
 async function moderatePost(postId, action) {
     try {
@@ -507,7 +504,6 @@ document.addEventListener('DOMContentLoaded', function() {
         handleCommentForm(postId);
     } else if (path === '/moderator') {
         loadModeratorPosts();
-        loadSpamStatistics();
-        loadSystemStats();
+        loadStats();
     }
 });
