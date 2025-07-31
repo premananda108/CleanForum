@@ -9,13 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function getSpamBadge(isSpam, spamScore) {
     if (isSpam) {
-        return '<span class="badge bg-danger">СПАМ</span>';
+        return '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">СПАМ</span>';
     } else if (spamScore > 0.5) {
-        return '<span class="badge bg-warning">Подозрительно</span>';
+        return '<span class="px-2 py-1 text-xs font-semibold text-black bg-yellow-400 rounded-full">Подозрительно</span>';
     } else if (spamScore > 0.3) {
-        return '<span class="badge bg-info">Проверено</span>';
+        return '<span class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-full">Проверено</span>';
     }
-    return '<span class="badge bg-success">Чисто</span>';
+    return '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full">Чисто</span>';
 }
 
 async function loadModeratorData() {
@@ -30,97 +30,68 @@ async function loadStats() {
         const contentContainer = document.getElementById('content-stats');
         const systemContainer = document.getElementById('system-stats');
 
-        // Заполняем статистику по контенту
-        contentContainer.innerHTML = `
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Всего постов
-                    <span class="badge bg-primary rounded-pill">${stats.total_posts}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Опубликованных
-                    <span class="badge bg-success rounded-pill">${stats.published_posts}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    В спаме
-                    <span class="badge bg-danger rounded-pill">${stats.spam_posts}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Процент спама
-                    <span class="badge bg-warning rounded-pill">${stats.spam_percentage}%</span>
-                </li>
-            </ul>
+        const statItem = (label, value, color) => `
+            <div class="flex justify-between items-center py-2">
+                <span class="text-sm text-gray-600">${label}</span>
+                <span class="px-3 py-1 text-xs font-bold text-white ${color} rounded-full">${value}</span>
+            </div>
         `;
 
-        // Заполняем системную статистику
+        contentContainer.innerHTML = `
+            ${statItem('Всего постов', stats.total_posts, 'bg-blue-500')}
+            ${statItem('Опубликованных', stats.published_posts, 'bg-green-500')}
+            ${statItem('В спаме', stats.spam_posts, 'bg-red-500')}
+            ${statItem('Процент спама', `${stats.spam_percentage}%`, 'bg-yellow-500')}
+        `;
+
         systemContainer.innerHTML = `
-            <ul class="list-group list-group-flush">
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия Redis
-                    <span class="badge bg-secondary rounded-pill">${stats.redis_version}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Используемая память
-                    <span class="badge bg-info rounded-pill">${stats.used_memory}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Количество векторов
-                    <span class="badge bg-success rounded-pill">${stats.vector_count}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия Python
-                    <span class="badge bg-dark rounded-pill">${stats.python_version}</span>
-                </li>
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия FastAPI
-                    <span class="badge bg-dark rounded-pill">${stats.fastapi_version}</span>
-                </li>
-                 <li class="list-group-item d-flex justify-content-between align-items-center">
-                    Версия приложения
-                    <span class="badge bg-dark rounded-pill">${stats.app_version}</span>
-                </li>
-            </ul>
+            ${statItem('Версия Redis', stats.redis_version, 'bg-gray-600')}
+            ${statItem('Используемая память', stats.used_memory, 'bg-blue-400')}
+            ${statItem('Количество векторов', stats.vector_count, 'bg-green-400')}
+            ${statItem('Версия Python', stats.python_version, 'bg-gray-800')}
+            ${statItem('Версия FastAPI', stats.fastapi_version, 'bg-gray-800')}
+            ${statItem('Версия приложения', stats.app_version, 'bg-gray-800')}
         `;
 
     } catch (error) {
         console.error('Error loading stats:', error);
-        document.getElementById('content-stats').innerHTML = '<div class="alert alert-danger">Ошибка загрузки статистики.</div>';
-        document.getElementById('system-stats').innerHTML = '<div class="alert alert-danger">Ошибка загрузки статистики.</div>';
+        const errorHtml = '<div class="p-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">Ошибка загрузки статистики.</div>';
+        document.getElementById('content-stats').innerHTML = errorHtml;
+        document.getElementById('system-stats').innerHTML = errorHtml;
     }
 }
 
-// Moderator functions
 async function loadModeratorPosts() {
     try {
         const posts = await api.getPendingPosts();
         const container = document.getElementById('pending-posts');
 
         if (posts.length === 0) {
-            container.innerHTML = '<p class="text-success">Нет постов для модерации</p>';
+            container.innerHTML = '<p class="text-green-600 font-medium">Нет постов для модерации</p>';
             return;
         }
 
         container.innerHTML = posts.map(post => `
-            <div class="border p-3 mb-3 rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <h6>
-                            <a href="/posts/${post.id}" target="_blank" class="text-decoration-none">${post.title}</a>
+            <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl">
+                <div class="flex justify-between items-start">
+                    <div class="flex-grow">
+                        <h6 class="font-bold text-gray-800">
+                            <a href="/posts/${post.id}" target="_blank" class="hover:text-primary-600 transition">${post.title}</a>
                         </h6>
-                        <p class="small text-muted">${post.content.substring(0, 100)}...</p>
-                        <div>
+                        <p class="text-sm text-gray-600 mt-1">${post.content.substring(0, 100)}...</p>
+                        <div class="mt-3 flex items-center space-x-2">
                             ${getSpamBadge(post.is_spam, post.spam_score)}
-                            <span class="small text-muted">Оценка: ${(post.spam_score * 100).toFixed(1)}%</span>
+                            <span class="text-xs text-gray-500">Оценка: <strong>${(post.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>
-                    <div class="btn-group-vertical btn-group-sm">
-                        <button class="btn btn-success" onclick="moderatePost('${post.id}', 'approve')">
+                    <div class="flex flex-col space-y-2 ml-4">
+                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition" onclick="moderatePost('${post.id}', 'approve')">
                             <i class="fas fa-check"></i>
                         </button>
-                        <button class="btn btn-danger" onclick="moderatePost('${post.id}', 'mark_spam')">
+                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition" onclick="moderatePost('${post.id}', 'mark_spam')">
                             <i class="fas fa-ban"></i>
                         </button>
-                        <button class="btn btn-info" onclick="showPostSpamAnalysis('${post.id}')">
+                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition" onclick="showPostSpamAnalysis('${post.id}')">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
@@ -132,8 +103,6 @@ async function loadModeratorPosts() {
         console.error('Error loading pending posts:', error);
     }
 }
-
-
 
 async function moderatePost(postId, action) {
     try {
@@ -161,34 +130,34 @@ async function loadModeratorComments() {
         const comments = await api.getPendingComments();
         const container = document.getElementById('pending-comments');
         if (comments.length === 0) {
-            container.innerHTML = '<p class="text-success">Нет комментариев для модерации</p>';
+            container.innerHTML = '<p class="text-green-600 font-medium">Нет комментариев для модерации</p>';
             return;
         }
         container.innerHTML = comments.map(comment => `
-            <div class="border p-3 mb-3 rounded">
-                <div class="d-flex justify-content-between align-items-start">
-                    <div>
-                        <p class="small">
-                            <a href="/posts/${comment.post_id}" target="_blank" class="text-decoration-none text-muted">
+            <div class="bg-gray-50 border border-gray-200 p-4 rounded-xl">
+                <div class="flex justify-between items-start">
+                    <div class="flex-grow">
+                        <p class="text-sm text-gray-700">
+                            <a href="/posts/${comment.post_id}" target="_blank" class="hover:text-primary-600 transition text-gray-600">
                                 ${comment.content.substring(0, 150)}...
                             </a>
                         </p>
-                        <div>
+                        <div class="mt-3 flex items-center space-x-2">
                             ${getSpamBadge(comment.is_spam, comment.spam_score)}
-                            <span class="small text-muted">Оценка: ${(comment.spam_score * 100).toFixed(1)}%</span>
+                            <span class="text-xs text-gray-500">Оценка: <strong>${(comment.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>
-                    <div class="btn-group-vertical btn-group-sm">
-                        <button class="btn btn-success" onclick="moderateComment('${comment.id}', 'approve')"><i class="fas fa-check"></i></button>
-                        <button class="btn btn-danger" onclick="moderateComment('${comment.id}', 'mark_spam')"><i class="fas fa-ban"></i></button>
-                        <button class="btn btn-info" onclick="showCommentSpamAnalysis('${comment.id}')"><i class="fas fa-search"></i></button>
+                    <div class="flex flex-col space-y-2 ml-4">
+                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition" onclick="moderateComment('${comment.id}', 'approve')"><i class="fas fa-check"></i></button>
+                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition" onclick="moderateComment('${comment.id}', 'mark_spam')"><i class="fas fa-ban"></i></button>
+                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition" onclick="showCommentSpamAnalysis('${comment.id}')"><i class="fas fa-search"></i></button>
                     </div>
                 </div>
             </div>
         `).join('');
     } catch (error) {
         console.error('Error loading pending comments:', error);
-        document.getElementById('pending-comments').innerHTML = '<p class="text-danger">Ошибка загрузки комментариев.</p>';
+        document.getElementById('pending-comments').innerHTML = '<p class="text-red-600">Ошибка загрузки комментариев.</p>';
     }
 }
 
@@ -216,28 +185,27 @@ async function showCommentSpamAnalysis(commentId) {
 function displaySpamAnalysis(analysis) {
     const content = document.getElementById('spam-analysis-content');
     content.innerHTML = `
-        <div class="row">
-            <div class="col-md-6">
-                <h6>Общая оценка</h6>
-                <p>Оценка спама: <strong>${(analysis.spam_score * 100).toFixed(1)}%</strong></p>
-                <p>Статус: ${getSpamBadge(analysis.is_spam, analysis.spam_score)}</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h6 class="font-bold text-gray-700 mb-2">Общая оценка</h6>
+                <p class="text-gray-600">Оценка спама: <strong class="text-lg text-gray-900">${(analysis.spam_score * 100).toFixed(1)}%</strong></p>
+                <div class="mt-2">Статус: ${getSpamBadge(analysis.is_spam, analysis.spam_score)}</div>
             </div>
-            <div class="col-md-6">
-                <h6>Детали анализа</h6>
-                <p>Эвристика: ${(analysis.heuristic_score * 100).toFixed(1)}%</p>
-                <p>Векторный: ${(analysis.vector_score * 100).toFixed(1)}%</p>
-                <p>Похожих элементов: ${analysis.similar_posts_count}</p>
+            <div class="bg-gray-50 p-4 rounded-lg">
+                <h6 class="font-bold text-gray-700 mb-2">Детали анализа</h6>
+                <p class="text-sm text-gray-600">Эвристика: <span class="font-semibold">${(analysis.heuristic_score * 100).toFixed(1)}%</span></p>
+                <p class="text-sm text-gray-600">Векторный: <span class="font-semibold">${(analysis.vector_score * 100).toFixed(1)}%</span></p>
+                <p class="text-sm text-gray-600">Похожих элементов: <span class="font-semibold">${analysis.similar_posts_count}</span></p>
             </div>
         </div>
-        <div class="mt-3">
-            <h6>Причины подозрения:</h6>
-            <ul>
+        <div class="mt-6">
+            <h6 class="font-bold text-gray-700 mb-2">Причины подозрения:</h6>
+            <ul class="list-disc list-inside space-y-1 text-gray-600">
                 ${analysis.reasons.map(reason => `<li>${reason}</li>`).join('') || '<li>Причин не найдено</li>'}
             </ul>
         </div>
     `;
-    const modal = new bootstrap.Modal(document.getElementById('spamAnalysisModal'));
-    modal.show();
+    showModal('spamAnalysisModal');
 }
 
 async function analyzeAllPosts() {
@@ -265,10 +233,7 @@ async function showLogs() {
         const logs = await api.getLogs();
         const content = document.getElementById('logs-content');
         content.textContent = logs;
-
-        const modal = new bootstrap.Modal(document.getElementById('logsModal'));
-        modal.show();
-
+        showModal('logsModal');
     } catch (error) {
         console.error('Error loading logs:', error);
         showAlert('Ошибка загрузки логов', 'danger');
