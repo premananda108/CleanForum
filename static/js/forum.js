@@ -23,8 +23,13 @@ class ForumAPI {
     }
 
     // Posts API
-    async getPosts(limit = 20, offset = 0) {
-        return this.request(`/posts?limit=${limit}&offset=${offset}`);
+    async getPosts(limit = 20, offset = 0, categoryId = null) {
+        console.log(`Запрос постов: limit=${limit}, offset=${offset}, categoryId=${categoryId}`);
+        let endpoint = `/posts?limit=${limit}&offset=${offset}`;
+        if (categoryId) {
+            endpoint += `&category_id=${categoryId}`;
+        }
+        return this.request(endpoint);
     }
 
     async getPost(postId) {
@@ -104,9 +109,9 @@ function getSpamBadge(isSpam, spamScore) {
 }
 
 // Main page functions
-async function loadPosts() {
+async function loadPosts(categoryId = null) {
     try {
-        const posts = await api.getPosts();
+        const posts = await api.getPosts(20, 0, categoryId);
         const container = document.getElementById('posts-container');
 
         if (posts.length === 0) {

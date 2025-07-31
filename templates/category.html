@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}{{ category.name }} - CleanForum{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h1><i class="fas fa-folder-open"></i> Категория: {{ category.name }}</h1>
+        <p class="text-muted">{{ category.description }}</p>
+        <hr>
+        <div id="posts-container">
+            <!-- Посты будут загружены через JavaScript -->
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-tags"></i> Другие категории</h5>
+            </div>
+            <div class="card-body" id="categories-list">
+                <!-- Категории будут загружены через JavaScript -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', async function() {
+        const categoryId = "{{ category.id }}";
+        
+        // Загрузка постов для данной категории
+        await loadPosts(categoryId);
+
+        // Загрузка списка всех категорий
+        await loadCategories();
+    });
+</script>
+{% endblock %}

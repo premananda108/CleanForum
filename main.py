@@ -110,9 +110,17 @@ async def search_page(request: Request):
 @app.get("/category/{category_id}")
 async def category_page(request: Request, category_id: str):
     """Страница категории"""
+    logging.info(f"Запрос страницы для категории: {category_id}")
+    from models.category import Category
+    category = await Category.get_by_id(category_id)
+    if not category:
+        logging.warning(f"Категория с ID {category_id} не найдена.")
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+    
+    logging.info(f"Найдена категория: {category.name}. Рендеринг шаблона.")
     return templates.TemplateResponse("category.html", {
         "request": request,
-        "category_id": category_id
+        "category": category
     })
 
 @app.get("/health")
