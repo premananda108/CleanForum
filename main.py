@@ -1,7 +1,7 @@
 """
 Основное приложение FastAPI
 """
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
@@ -78,6 +78,17 @@ app.include_router(comments.router, prefix="/api", tags=["comments"])
 app.include_router(categories.router, prefix="/api", tags=["categories"])
 app.include_router(moderator.router, prefix="/api/moderator", tags=["moderator"])
 app.include_router(search.router, prefix="/api", tags=["search"])
+
+@app.get("/api/logs")
+async def get_logs():
+    """Отдает последние 100 строк лог-файла"""
+    try:
+        with open("logs/forum.log", "r", encoding="utf-8") as f:
+            lines = f.readlines()[-100:]
+        return Response(content="".join(lines), media_type="text/plain")
+    except FileNotFoundError:
+        return Response(content="Лог-файл не найден.", status_code=404, media_type="text/plain")
+
 
 @app.get("/")
 async def home(request: Request):

@@ -92,6 +92,14 @@ class ForumAPI {
     async retrainModel() {
         return this.request('/moderator/retrain', { method: 'POST' });
     }
+
+    async getLogs() {
+        const response = await fetch(`${this.baseURL}/logs`);
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return await response.text();
+    }
 }
 
 const api = new ForumAPI();
@@ -446,6 +454,21 @@ async function retrainModel() {
     } catch (error) {
         console.error('Error retraining model:', error);
         showAlert('Ошибка запуска переобучения', 'danger');
+    }
+}
+
+async function showLogs() {
+    try {
+        const logs = await api.getLogs();
+        const content = document.getElementById('logs-content');
+        content.textContent = logs;
+
+        const modal = new bootstrap.Modal(document.getElementById('logsModal'));
+        modal.show();
+
+    } catch (error) {
+        console.error('Error loading logs:', error);
+        showAlert('Ошибка загрузки логов', 'danger');
     }
 }
 
