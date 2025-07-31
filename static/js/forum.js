@@ -71,6 +71,10 @@ class ForumAPI {
         return this.request('/moderator/system-stats');
     }
 
+    async analyzeAllPosts() {
+        return this.request('/moderator/analyze-all-posts', { method: 'POST' });
+    }
+
     async retrainModel() {
         return this.request('/moderator/retrain', { method: 'POST' });
     }
@@ -409,6 +413,16 @@ async function showSpamAnalysis(postId) {
 
     } catch (error) {
         console.error('Error loading spam analysis:', error);
+    }
+}
+
+async function analyzeAllPosts() {
+    try {
+        const result = await api.analyzeAllPosts();
+        showAlert(result.message, 'info');
+    } catch (error) {
+        console.error('Error analyzing all posts:', error);
+        showAlert('Ошибка запуска анализа', 'danger');
     }
 }
 
