@@ -24,13 +24,13 @@ class RedisDatabase:
 
         # Тестируем подключение
         await self.redis_client.ping()
-        print(f"✅ Подключен к Redis {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+        logging.info(f"Подключен к Redis {settings.REDIS_HOST}:{settings.REDIS_PORT}")
 
     async def disconnect(self):
         """Отключение от Redis"""
         if self.redis_client:
             await self.redis_client.close()
-            logging.info("🔌 Отключен от Redis.")
+            logging.info("Отключен от Redis.")
 
     async def get(self, key: str) -> Optional[str]:
         """Получить значение по ключу"""

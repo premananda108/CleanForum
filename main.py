@@ -21,7 +21,8 @@ from api import posts, comments, categories, moderator, search
 async def lifespan(app: FastAPI):
     """Управление жизненным циклом приложения"""
     # Запуск
-    print(f"🚀 Запуск {settings.APP_NAME} v{settings.APP_VERSION}")
+    # Запуск
+    logging.info(f"Запуск {settings.APP_NAME} v{settings.APP_VERSION}")
 
     # Подключаемся к Redis
     await db.connect()
@@ -45,7 +46,7 @@ async def lifespan(app: FastAPI):
     yield
 
     # Завершение
-    print("🔚 Завершение работы приложения")
+    logging.info("Завершение работы приложения")
     await db.disconnect()
 
 # Создаем приложение

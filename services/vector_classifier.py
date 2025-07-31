@@ -29,20 +29,20 @@ class VectorSpamClassifier:
     async def initialize(self):
         """Инициализация модели"""
         if not SENTENCE_TRANSFORMERS_AVAILABLE:
-            print("⚠️ Векторная классификация недоступна")
+            logging.warning("SentenceTransformers не установлен. Векторная классификация недоступна.")
             return
 
         try:
-            print("🤖 Загружаем модель SentenceTransformer...")
+            logging.info("Загружаем модель SentenceTransformer...")
             self.model = SentenceTransformer('all-MiniLM-L6-v2')
             self.is_initialized = True
-            print("✅ Модель загружена успешно!")
+            logging.info("Модель SentenceTransformer загружена успешно!")
 
             # Подключаемся к векторному менеджеру
             await vector_manager.connect()
 
         except Exception as e:
-            print(f"❌ Ошибка загрузки модели: {e}")
+            logging.error(f"Ошибка загрузки модели SentenceTransformer: {e}", exc_info=True)
             self.is_initialized = False
 
     def create_vector(self, title: str, content: str, tags: List[str]) -> np.ndarray:
@@ -216,7 +216,7 @@ class VectorSpamClassifier:
                 "vector_dimension": settings.VECTOR_DIM
             }
         except Exception as e:
-            print(f"❌ Ошибка получения статистики: {e}")
+            logging.error(f"Classifier: ошибка получения статистики: {e}")
             return {
                 "model_loaded": self.is_initialized,
                 "error": str(e)

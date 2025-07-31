@@ -5,6 +5,7 @@ import redis.asyncio as redis
 import numpy as np
 from typing import List, Dict, Any, Optional
 import json
+import logging
 from config import settings
 
 class RedisVectorManager:
@@ -26,7 +27,7 @@ class RedisVectorManager:
         )
 
         await self.redis_client.ping()
-        print(f"✅ Vector Manager подключен к Redis")
+        logging.info("Vector Manager: успешно подключен к Redis.")
 
         # Создаем индекс если его нет
         await self.create_index()
@@ -41,7 +42,7 @@ class RedisVectorManager:
         try:
             # Проверяем, существует ли индекс
             await self.redis_client.execute_command("FT.INFO", self.index_name)
-            print(f"📊 Индекс {self.index_name} уже существует")
+            logging.info(f"Индекс {self.index_name} уже существует")
         except:
             # Создаем новый индекс
             schema = [
@@ -60,7 +61,7 @@ class RedisVectorManager:
                 "PREFIX", "1", "vector:",
                 "SCHEMA", *schema
             )
-            print(f"🎯 Создан векторный индекс {self.index_name}")
+            logging.info(f"Создан векторный индекс {self.index_name}")
 
     async def add_vector(self, doc_id: str, vector: np.ndarray, 
                         label: str, title: str, content: str) -> bool:
@@ -83,7 +84,7 @@ class RedisVectorManager:
             return True
 
         except Exception as e:
-            print(f"❌ Ошибка добавления вектора {doc_id}: {e}")
+            logging.error(f"Vector Manager: ошибка добавления вектора {doc_id}: {e}")
             return False
 
     async def search_similar(self, query_vector: np.ndarray, k: int = 9) -> List[Dict[str, Any]]:
@@ -120,7 +121,7 @@ class RedisVectorManager:
             return parsed_results
 
         except Exception as e:
-            print(f"❌ Ошибка поиска: {e}")
+            logging.error(f"Vector Manager: ошибка поиска: {e}")
             return []
 
     async def get_index_info(self) -> Dict[str, Any]:
@@ -141,7 +142,7 @@ class RedisVectorManager:
             return index_info
 
         except Exception as e:
-            print(f"❌ Ошибка получения информации об индексе: {e}")
+            logging.error(f"Vector Manager: ошибка получения информации об индексе: {e}")
             return {}
 
     async def delete_vector(self, doc_id: str) -> bool:
@@ -151,7 +152,7 @@ class RedisVectorManager:
             await self.redis_client.delete(doc_key)
             return True
         except Exception as e:
-            print(f"❌ Ошибка удаления вектора {doc_id}: {e}")
+            logging.error(f"Vector Manager: ошибка удаления вектора {doc_id}: {e}")
             return False
 
 # Глобальный экземпляр менеджера
