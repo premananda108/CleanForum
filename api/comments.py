@@ -16,4 +16,5 @@ async def create_comment(comment_data: CommentCreate, current_user: str = Depend
 
 @router.get("/posts/{post_id}/comments", response_model=List[CommentResponse])
 async def get_post_comments(post_id: str):
+    logging.info(f"Запрос комментариев для поста {post_id}")
     return await Comment.get_by_post(post_id)

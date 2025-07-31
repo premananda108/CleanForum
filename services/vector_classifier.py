@@ -184,7 +184,7 @@ class VectorSpamClassifier:
 
     async def retrain_with_feedback(self, post_id: str, is_spam: bool, moderator_id: str):
         """Переобучение на основе обратной связи модератора"""
-
+        logging.info(f"💡 Получена обратная связь для поста {post_id} от модератора {moderator_id}: {'спам' if is_spam else 'не спам'}")
         # Сохраняем обратную связь
         feedback_key = f"feedback:{post_id}"
         feedback_data = {
@@ -198,7 +198,7 @@ class VectorSpamClassifier:
 
         # Обновляем метку в векторной базе
         # В реальной реализации здесь можно было бы обновить существующий вектор
-        print(f"💡 Получена обратная связь для поста {post_id}: {'спам' if is_spam else 'не спам'}")
+        logging.info(f"Обратная связь для поста {post_id} сохранена.")
 
     async def get_classification_stats(self) -> Dict[str, Any]:
         """Получить статистику классификации"""

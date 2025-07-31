@@ -29,6 +29,7 @@ class RedisDatabase:
         """Отключение от Redis"""
         if self.redis_client:
             await self.redis_client.close()
+            logging.info("🔌 Отключен от Redis.")
 
     async def get(self, key: str) -> Optional[str]:
         """Получить значение по ключу"""

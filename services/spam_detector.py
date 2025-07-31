@@ -121,12 +121,14 @@ class SpamDetector:
     async def analyze_post(self, post_id: str, title: str, content: str, 
                           tags: List[str], author_id: str) -> Dict[str, Any]:
         """Анализировать пост на спам"""
+        logging.info(f"Запуск эвристического анализа для поста {post_id}")
 
         # Получаем возраст пользователя
         user_age_days = await User.get_user_age_days(author_id)
 
         # Рассчитываем оценку спама
         result = self.calculate_spam_score(title, content, tags, author_id, user_age_days)
+        logging.info(f"Эвристический анализ для поста {post_id} завершен. Оценка: {result['spam_score']:.2f}")
 
         # Сохраняем результат анализа
         analysis_key = f"spam_analysis:{post_id}"
