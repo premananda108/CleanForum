@@ -71,6 +71,11 @@ class RedisDatabase:
         """Добавить в отсортированное множество"""
         return await self.redis_client.zadd(key, mapping)
 
+    async def zrange(self, key: str, start: int = 0, end: int = -1, 
+                      withscores: bool = False) -> List:
+        """Получить элементы из отсортированного множества (по возрастанию)"""
+        return await self.redis_client.zrange(key, start, end, withscores=withscores)
+
     async def zrevrange(self, key: str, start: int = 0, end: int = -1, 
                        withscores: bool = False) -> List:
         """Получить элементы из отсортированного множества (по убыванию)"""

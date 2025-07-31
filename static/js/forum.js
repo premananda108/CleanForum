@@ -47,6 +47,18 @@ class ForumAPI {
         return this.request('/categories');
     }
 
+    // Comments API
+    async createComment(commentData) {
+        return this.request('/comments', {
+            method: 'POST',
+            body: JSON.stringify(commentData)
+        });
+    }
+
+    async getPostComments(postId) {
+        return this.request(`/posts/${postId}/comments`);
+    }
+
     // Moderator API
     async getPendingPosts() {
         return this.request('/moderator/pending-posts');
