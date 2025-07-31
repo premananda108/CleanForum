@@ -1,5 +1,6 @@
 """API для категорий"""
 from fastapi import APIRouter, HTTPException
+import logging
 from typing import List
 from models.category import Category, CategoryCreate, CategoryResponse
 

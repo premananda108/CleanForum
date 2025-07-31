@@ -2,6 +2,7 @@
 API для панели модератора с антиспам функциями
 """
 from fastapi import APIRouter, HTTPException, Query
+import logging
 from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 import json

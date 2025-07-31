@@ -44,3 +44,4 @@ def setup_logging():
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
     logging.info("Система логирования настроена.")
+    logging.is_configured = True

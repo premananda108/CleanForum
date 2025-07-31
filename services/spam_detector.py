@@ -4,6 +4,7 @@
 from typing import Dict, List, Any, Optional
 import re
 import json
+import logging
 from datetime import datetime, timedelta
 from config import settings
 from models.database import db

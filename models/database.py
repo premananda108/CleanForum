@@ -3,6 +3,7 @@
 """
 import redis.asyncio as redis
 import json
+import logging
 from typing import Dict, List, Optional, Any
 from datetime import datetime
 from config import settings

@@ -1,5 +1,6 @@
 """API для комментариев"""
 from fastapi import APIRouter, HTTPException, Depends
+import logging
 from typing import List
 from models.comment import Comment, CommentCreate, CommentResponse
 import uuid

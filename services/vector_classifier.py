@@ -4,6 +4,7 @@
 import numpy as np
 from typing import Dict, List, Any, Optional, Tuple
 import json
+import logging
 from datetime import datetime
 from collections import Counter
 from config import settings
