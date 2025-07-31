@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="row">
+    <div class="col-md-8">
+        <h1><i class="fas fa-comments"></i> Последние посты</h1>
+        <div id="posts-container">
+            <!-- Посты будут загружены через JavaScript -->
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-tags"></i> Категории</h5>
+            </div>
+            <div class="card-body" id="categories-list">
+                <!-- Категории будут загружены через JavaScript -->
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-shield-alt"></i> Защита от спама</h5>
+            </div>
+            <div class="card-body">
+                <p>Наш форум использует передовые технологии защиты от спама:</p>
+                <ul>
+                    <li><strong>Векторный анализ</strong> с SentenceTransformer</li>
+                    <li><strong>Эвристические алгоритмы</strong></li>
+                    <li><strong>Обучение на обратной связи</strong></li>
+                    <li><strong>Redis Vector Search</strong></li>
+                </ul>
+                <div id="spam-stats" class="mt-3">
+                    <!-- Статистика спама -->
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

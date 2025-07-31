@@ -1,0 +1,158 @@
+"""
+Redis менеджер для работы с Vector Sets
+"""
+import redis.asyncio as redis
+import numpy as np
+from typing import List, Dict, Any, Optional
+import json
+from app.config import settings
+
+class RedisVectorManager:
+    """Менеджер для работы с Redis Vector Sets"""
+
+    def __init__(self):
+        self.redis_client: Optional[redis.Redis] = None
+        self.index_name = settings.VECTOR_INDEX_NAME
+        self.vector_dim = settings.VECTOR_DIM
+
+    async def connect(self):
+        """Подключение к Redis"""
+        self.redis_client = redis.Redis(
+            host=settings.REDIS_HOST,
+            port=settings.REDIS_PORT,
+            db=settings.REDIS_DB,
+            password=settings.REDIS_PASSWORD,
+            decode_responses=False  # Важно! Для работы с бинарными данными
+        )
+
+        await self.redis_client.ping()
+        print(f"✅ Vector Manager подключен к Redis")
+
+        # Создаем индекс если его нет
+        await self.create_index()
+
+    async def disconnect(self):
+        """Отключение от Redis"""
+        if self.redis_client:
+            await self.redis_client.close()
+
+    async def create_index(self):
+        """Создать индекс для векторного поиска"""
+        try:
+            # Проверяем, существует ли индекс
+            await self.redis_client.execute_command("FT.INFO", self.index_name)
+            print(f"📊 Индекс {self.index_name} уже существует")
+        except:
+            # Создаем новый индекс
+            schema = [
+                "vector", "VECTOR", "HNSW", "6",
+                "TYPE", "FLOAT32",
+                "DIM", str(self.vector_dim),
+                "DISTANCE_METRIC", "COSINE",
+                "label", "TAG",
+                "title", "TEXT",
+                "content", "TEXT"
+            ]
+
+            await self.redis_client.execute_command(
+                "FT.CREATE", self.index_name,
+                "ON", "HASH",
+                "PREFIX", "1", "vector:",
+                "SCHEMA", *schema
+            )
+            print(f"🎯 Создан векторный индекс {self.index_name}")
+
+    async def add_vector(self, doc_id: str, vector: np.ndarray, 
+                        label: str, title: str, content: str) -> bool:
+        """Добавить вектор в индекс"""
+        try:
+            doc_key = f"vector:{doc_id}"
+
+            # Подготавливаем данные
+            vector_bytes = vector.astype(np.float32).tobytes()
+
+            # Сохраняем документ
+            await self.redis_client.hset(doc_key, mapping={
+                "vector": vector_bytes,
+                "label": label,
+                "title": title,
+                "content": content[:500],  # Ограничиваем длину для индексации
+                "doc_id": doc_id
+            })
+
+            return True
+
+        except Exception as e:
+            print(f"❌ Ошибка добавления вектора {doc_id}: {e}")
+            return False
+
+    async def search_similar(self, query_vector: np.ndarray, k: int = 9) -> List[Dict[str, Any]]:
+        """Поиск похожих векторов"""
+        try:
+            # Подготавливаем запрос
+            query_bytes = query_vector.astype(np.float32).tobytes()
+
+            # Выполняем поиск
+            query = f"*=>[KNN {k} @vector $blob AS score]"
+
+            results = await self.redis_client.execute_command(
+                "FT.SEARCH", self.index_name, query,
+                "PARAMS", "2", "blob", query_bytes,
+                "DIALECT", "2",
+                "RETURN", "4", "score", "label", "title", "doc_id"
+            )
+
+            # Парсим результаты
+            parsed_results = []
+            if len(results) > 1:
+                num_results = results[0]
+                for i in range(1, len(results), 2):
+                    if i + 1 < len(results):
+                        doc_data = results[i + 1]
+                        if len(doc_data) >= 8:  # score, label, title, doc_id
+                            parsed_results.append({
+                                "doc_id": doc_data[7].decode() if isinstance(doc_data[7], bytes) else doc_data[7],
+                                "score": float(doc_data[1].decode() if isinstance(doc_data[1], bytes) else doc_data[1]),
+                                "label": doc_data[3].decode() if isinstance(doc_data[3], bytes) else doc_data[3],
+                                "title": doc_data[5].decode() if isinstance(doc_data[5], bytes) else doc_data[5]
+                            })
+
+            return parsed_results
+
+        except Exception as e:
+            print(f"❌ Ошибка поиска: {e}")
+            return []
+
+    async def get_index_info(self) -> Dict[str, Any]:
+        """Получить информацию об индексе"""
+        try:
+            info = await self.redis_client.execute_command("FT.INFO", self.index_name)
+
+            # Парсим информацию об индексе
+            index_info = {}
+            for i in range(0, len(info), 2):
+                if i + 1 < len(info):
+                    key = info[i].decode() if isinstance(info[i], bytes) else info[i]
+                    value = info[i + 1]
+                    if isinstance(value, bytes):
+                        value = value.decode()
+                    index_info[key] = value
+
+            return index_info
+
+        except Exception as e:
+            print(f"❌ Ошибка получения информации об индексе: {e}")
+            return {}
+
+    async def delete_vector(self, doc_id: str) -> bool:
+        """Удалить вектор из индекса"""
+        try:
+            doc_key = f"vector:{doc_id}"
+            await self.redis_client.delete(doc_key)
+            return True
+        except Exception as e:
+            print(f"❌ Ошибка удаления вектора {doc_id}: {e}")
+            return False
+
+# Глобальный экземпляр менеджера
+vector_manager = RedisVectorManager()

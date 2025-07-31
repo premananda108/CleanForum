@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}Панель модератора - Advanced Forum{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h1><i class="fas fa-user-shield"></i> Панель модератора</h1>
+        <p class="text-muted">Управление контентом и борьба со спамом</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-exclamation-triangle"></i> Подозрительные посты</h5>
+            </div>
+            <div class="card-body" id="pending-posts">
+                <!-- Посты для модерации -->
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="fas fa-chart-bar"></i> Статистика спама</h5>
+            </div>
+            <div class="card-body" id="spam-statistics">
+                <!-- Статистика -->
+            </div>
+        </div>
+
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5><i class="fas fa-brain"></i> Управление моделью</h5>
+            </div>
+            <div class="card-body">
+                <button class="btn btn-primary" onclick="retrainModel()">
+                    <i class="fas fa-sync"></i> Переобучить модель
+                </button>
+                <button class="btn btn-info" onclick="loadTrainingLogs()">
+                    <i class="fas fa-list"></i> Логи обучения
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Модальное окно для детального анализа -->
+<div class="modal fade" id="spamAnalysisModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Анализ спама</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body" id="spam-analysis-content">
+                <!-- Детальный анализ -->
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
