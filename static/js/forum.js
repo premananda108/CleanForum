@@ -226,6 +226,11 @@ async function loadPostDetail(postId) {
 
         await loadComments(postId);
 
+        // Загружаем и отображаем похожие посты
+        if (post.similar_posts) {
+            renderSimilarPosts(post.similar_posts);
+        }
+
     } catch (error) {
         console.error('Error loading post detail:', error);
         document.getElementById('post-detail-container').innerHTML = '<div class="alert alert-danger">Ошибка загрузки поста.</div>';
@@ -272,6 +277,29 @@ async function handleCommentForm(postId) {
             showAlert('Ошибка при добавлении комментария.', 'danger');
         }
     });
+}
+
+function renderSimilarPosts(posts) {
+    const container = document.getElementById('similar-posts-container');
+    if (!container) return;
+
+    if (!posts || posts.length === 0) {
+        container.innerHTML = '<p class="text-muted small">Похожих постов не найдено.</p>';
+        return;
+    }
+
+    container.innerHTML = `
+        <ul class="list-unstyled">
+            ${posts.map(post => `
+                <li class="mb-2">
+                    <a href="/posts/${post.id}" class="text-decoration-none small">${post.title}</a>
+                    <div class="text-muted small">
+                        <i class="fas fa-user"></i> ${post.author_username}
+                    </div>
+                </li>
+            `).join('')}
+        </ul>
+    `;
 }
 
 async function loadStats() {

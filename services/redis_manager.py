@@ -145,6 +145,22 @@ class RedisVectorManager:
             logging.error(f"Vector Manager: ошибка получения информации об индексе: {e}")
             return {}
 
+    async def get_vector_by_id(self, doc_id: str) -> Optional[np.ndarray]:
+        """Получить вектор по ID документа"""
+        try:
+            doc_key = f"vector:{doc_id}"
+            vector_bytes = await self.redis_client.hget(doc_key, "vector")
+
+            if not vector_bytes:
+                logging.warning(f"Vector Manager: вектор для {doc_id} не найден.")
+                return None
+
+            return np.frombuffer(vector_bytes, dtype=np.float32)
+
+        except Exception as e:
+            logging.error(f"Vector Manager: ошибка получения вектора {doc_id}: {e}")
+            return None
+
     async def delete_vector(self, doc_id: str) -> bool:
         """Удалить вектор из индекса"""
         try:

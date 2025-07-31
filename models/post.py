@@ -46,6 +46,7 @@ class PostResponse(BaseModel):
     is_spam: bool = False
     spam_score: float = 0.0
     reading_time: int = 0  # в минутах
+    similar_posts: Optional[List['PostResponse']] = None
 
 class Post:
     """Класс для работы с постами"""
@@ -241,3 +242,38 @@ class Post:
     async def count_spam() -> int:
         """Подсчитать количество спам-постов."""
         return await db.scard("posts:spam")
+
+    @staticmethod
+    async def get_similar_posts(post_id: str, limit: int = 5) -> List['PostResponse']:
+        """Найти похожие посты, используя векторный поиск"""
+        from services.redis_manager import vector_manager
+
+        # 1. Получаем вектор для текущего поста
+        post_vector = await vector_manager.get_vector_by_id(post_id)
+        if post_vector is None:
+            return []
+
+        # 2. Ищем похожие посты. Запрашиваем на один больше, т.к. сам пост может вернуться
+        similar_results = await vector_manager.search_similar(post_vector, k=limit + 1)
+
+        # 3. Фильтруем и получаем посты
+        similar_posts = []
+        for result in similar_results:
+            # Пропускаем сам пост
+            if result['doc_id'] == post_id:
+                continue
+
+            # Получаем данные поста
+            post = await Post.get_by_id(result['doc_id'])
+            if post and post.status == PostStatus.PUBLISHED:
+                similar_posts.append(post)
+
+            # Прерываем, если набрали нужное количество
+            if len(similar_posts) >= limit:
+                break
+
+        return similar_posts
+
+
+# Это нужно для обновления ссылок в Pydantic моделях после определения всех классов
+PostResponse.model_rebuild()

@@ -76,6 +76,10 @@ async def get_post(post_id: str, increment_views: bool = True):
     if not post:
         raise HTTPException(status_code=404, detail="Пост не найден")
 
+    # Получаем похожие посты
+    similar_posts = await Post.get_similar_posts(post_id)
+    post.similar_posts = similar_posts
+
     return post
 
 @router.put("/posts/{post_id}", response_model=PostResponse)
