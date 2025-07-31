@@ -71,28 +71,42 @@ async def get_spam_statistics():
 
 @router.get("/posts/{post_id}/analysis", response_model=SpamAnalysisResponse)
 async def get_detailed_analysis(post_id: str):
-    """Получить детальный анализ спама для поста"""
-
-    # Получаем данные анализа
+    """Получить детальный анализ спама для поста.
+    Если анализ отсутствует, он будет выполнен на лету.
+    """
+    # Пытаемся получить существующие данные анализа
     analysis_data = await db.hgetall(f"vector_analysis:{post_id}")
+
+    # Если анализ не найден, выполняем его
     if not analysis_data:
-        raise HTTPException(status_code=404, detail="Анализ не найден")
+        logging.info(f"Анализ для поста {post_id} не найден. Выполняется повторный анализ.")
+        post = await Post.get_by_id(post_id)
+        if not post:
+            raise HTTPException(status_code=404, detail="Пост для анализа не найден")
+
+        # Выполняем анализ (эта функция должна сохранять результат в Redis)
+        analysis_data = await vector_classifier.analyze_with_vectors(
+            post.id, post.title, post.content, post.tags, post.author_id
+        )
+        if not analysis_data:
+             raise HTTPException(status_code=500, detail="Не удалось выполнить анализ поста")
 
     # Получаем причины из JSON
-    reasons = json.loads(analysis_data.get("reasons", "[]"))
+    reasons_raw = analysis_data.get("reasons", "[]")
+    reasons = json.loads(reasons_raw) if isinstance(reasons_raw, str) else reasons_raw
 
     return SpamAnalysisResponse(
         post_id=analysis_data["post_id"],
         spam_score=float(analysis_data.get("spam_score", 0)),
-        is_spam=analysis_data.get("is_spam") == "True",
+        is_spam=str(analysis_data.get("is_spam")) == "True",
         reasons=reasons,
         heuristic_score=float(analysis_data.get("heuristic_score", 0)),
         vector_score=float(analysis_data.get("vector_score", 0)),
         vector_prediction=analysis_data.get("vector_prediction", "unknown"),
         vector_confidence=float(analysis_data.get("vector_confidence", 0)),
         similar_posts_count=int(analysis_data.get("similar_posts_count", 0)),
-        spam_neighbors=0,  # Заглушка
-        legitimate_neighbors=0,  # Заглушка  
+        spam_neighbors=int(analysis_data.get("spam_neighbors", 0)),
+        legitimate_neighbors=int(analysis_data.get("legitimate_neighbors", 0)),
         analyzed_at=analysis_data.get("analyzed_at", "")
     )
 
