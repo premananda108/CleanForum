@@ -5,7 +5,7 @@ import redis.asyncio as redis
 import numpy as np
 from typing import List, Dict, Any, Optional
 import json
-from app.config import settings
+from config import settings
 
 class RedisVectorManager:
     """Менеджер для работы с Redis Vector Sets"""

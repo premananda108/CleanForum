@@ -7,10 +7,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 
-from app.config import settings
-from app.models.database import db
-from app.services.vector_classifier import vector_classifier
-from app.api import posts, comments, categories, moderator, search
+from config import settings
+from models.database import db
+from services.vector_classifier import vector_classifier
+from api import posts, comments, categories, moderator, search
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -48,10 +48,10 @@ app.add_middleware(
 )
 
 # Подключаем статические файлы
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 # Настраиваем шаблоны
-templates = Jinja2Templates(directory="app/templates")
+templates = Jinja2Templates(directory="templates")
 
 # Подключаем роуты API
 app.include_router(posts.router, prefix="/api", tags=["posts"])

@@ -1,7 +1,7 @@
 """API для комментариев"""
 from fastapi import APIRouter, HTTPException, Depends
 from typing import List
-from app.models.comment import Comment, CommentCreate, CommentResponse
+from models.comment import Comment, CommentCreate, CommentResponse
 import uuid
 
 router = APIRouter()

@@ -5,9 +5,9 @@ from typing import Dict, List, Any, Optional
 import re
 import json
 from datetime import datetime, timedelta
-from app.config import settings
-from app.models.database import db
-from app.models.user import User
+from config import settings
+from models.database import db
+from models.user import User
 
 class SpamDetector:
     """Эвристический детектор спама"""

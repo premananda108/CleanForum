@@ -6,10 +6,10 @@ from typing import Dict, List, Any, Optional, Tuple
 import json
 from datetime import datetime
 from collections import Counter
-from app.config import settings
-from app.services.redis_manager import vector_manager
-from app.services.spam_detector import spam_detector
-from app.models.database import db
+from config import settings
+from services.redis_manager import vector_manager
+from services.spam_detector import spam_detector
+from models.database import db
 
 try:
     from sentence_transformers import SentenceTransformer

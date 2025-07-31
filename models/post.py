@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 import uuid
 import json
-from app.models.database import db
+from models.database import db
 
 class PostStatus(str, Enum):
     DRAFT = "draft"
@@ -105,8 +105,8 @@ class Post:
             post_data["view_count"] = str(new_view_count)
 
         # Получаем дополнительную информацию
-        from app.models.category import Category
-        from app.models.user import User
+        from models.category import Category
+        from models.user import User
 
         category = await Category.get_by_id(post_data["category_id"])
         author = await User.get_by_id(post_data["author_id"])

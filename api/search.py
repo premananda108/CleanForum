@@ -1,7 +1,7 @@
 """API для поиска"""
 from fastapi import APIRouter, Query
 from typing import List
-from app.models.post import Post, PostResponse
+from models.post import Post, PostResponse
 
 router = APIRouter()
 

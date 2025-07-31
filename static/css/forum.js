@@ -1,4 +1,4 @@
-// Advanced Forum - JavaScript для работы с API
+// CleanForum - JavaScript для работы с API
 
 class ForumAPI {
     constructor() {

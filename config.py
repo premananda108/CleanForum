@@ -6,7 +6,7 @@ from typing import Optional
 
 class Settings:
     # Основные настройки
-    APP_NAME: str = "Advanced Forum"
+    APP_NAME: str = "CleanForum"
     APP_VERSION: str = "1.0.0"
     DEBUG: bool = True
 

@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 import uuid
-from app.models.database import db
+from models.database import db
 
 class CommentCreate(BaseModel):
     content: str = Field(..., min_length=5, max_length=2000)
@@ -63,7 +63,7 @@ class Comment:
             return None
 
         # Получаем информацию об авторе
-        from app.models.user import User
+        from models.user import User
         author = await User.get_by_id(comment_data["author_id"])
 
         return CommentResponse(

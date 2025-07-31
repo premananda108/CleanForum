@@ -5,7 +5,7 @@ import redis.asyncio as redis
 import json
 from typing import Dict, List, Optional, Any
 from datetime import datetime
-from app.config import settings
+from config import settings
 
 class RedisDatabase:
     def __init__(self):

@@ -6,10 +6,10 @@ from typing import List, Dict, Any, Optional
 from pydantic import BaseModel
 import json
 from datetime import datetime
-from app.models.database import db
-from app.models.post import Post, PostResponse, PostStatus
-from app.services.vector_classifier import vector_classifier
-from app.services.spam_detector import spam_detector
+from models.database import db
+from models.post import Post, PostResponse, PostStatus
+from services.vector_classifier import vector_classifier
+from services.spam_detector import spam_detector
 
 router = APIRouter()
 

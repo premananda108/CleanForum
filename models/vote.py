@@ -6,7 +6,7 @@ from typing import Optional
 from datetime import datetime
 from enum import Enum
 import uuid
-from app.models.database import db
+from models.database import db
 
 class VoteType(str, Enum):
     UP = "up"

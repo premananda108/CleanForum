@@ -3,10 +3,10 @@ API роуты для работы с постами
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
 from typing import List, Optional
-from app.models.post import Post, PostCreate, PostUpdate, PostResponse
-from app.models.category import Category
-from app.models.user import User, UserRole
-from app.services.vector_classifier import vector_classifier
+from models.post import Post, PostCreate, PostUpdate, PostResponse
+from models.category import Category
+from models.user import User, UserRole
+from services.vector_classifier import vector_classifier
 import uuid
 
 router = APIRouter()
@@ -128,7 +128,7 @@ async def delete_post(
     # В реальном приложении здесь проверка прав
 
     # Помечаем как удаленный
-    from app.models.post import PostStatus
+    from models.post import PostStatus
     await Post.mark_as_spam(post_id, 0.0, False)  # Сбрасываем спам
 
     # Обновляем счетчик в категории
@@ -140,7 +140,7 @@ async def delete_post(
 async def get_spam_analysis(post_id: str):
     """Получить результаты анализа спама для поста"""
 
-    from app.models.database import db
+    from models.database import db
 
     # Получаем анализ спама
     analysis_data = await db.hgetall(f"vector_analysis:{post_id}")

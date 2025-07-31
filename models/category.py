@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from typing import Optional, List
 from datetime import datetime
 import uuid
-from app.models.database import db
+from models.database import db
 
 class CategoryCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
