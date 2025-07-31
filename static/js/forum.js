@@ -47,6 +47,11 @@ class ForumAPI {
         return this.request('/categories');
     }
 
+    // Search API
+    async searchPosts(query) {
+        return this.request(`/search?q=${encodeURIComponent(query)}`);
+    }
+
     // Comments API
     async createComment(commentData) {
         return this.request('/comments', {
@@ -555,6 +560,85 @@ async function handleCreatePostForm() {
     });
 }
 
+// Search page functions
+async function handleSearchForm() {
+    const form = document.getElementById('search-form');
+    const resultsContainer = document.getElementById('search-results-container');
+    const queryInput = document.getElementById('search-query');
+
+    if (!form) return;
+
+    // Check for query in URL and trigger search on page load
+    const urlParams = new URLSearchParams(window.location.search);
+    const q = urlParams.get('q');
+    if (q) {
+        queryInput.value = q;
+        await performSearch(q);
+    }
+
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const query = queryInput.value.trim();
+
+        // Update URL without reloading
+        const newUrl = new URL(window.location);
+        newUrl.searchParams.set('q', query);
+        window.history.pushState({path: newUrl.href}, '', newUrl.href);
+
+        await performSearch(query);
+    });
+
+    async function performSearch(query) {
+        if (query.length < 2) {
+            resultsContainer.innerHTML = '<p class="text-warning">Поисковый запрос должен содержать минимум 2 символа.</p>';
+            return;
+        }
+
+        resultsContainer.innerHTML = '<p class="text-muted">Идет поиск...</p>';
+
+        try {
+            const posts = await api.searchPosts(query);
+            renderSearchResults(posts, resultsContainer);
+        } catch (error) {
+            console.error('Ошибка поиска:', error);
+            resultsContainer.innerHTML = '<div class="alert alert-danger">Произошла ошибка во время поиска.</div>';
+        }
+    }
+}
+
+function renderSearchResults(posts, container) {
+    if (posts.length === 0) {
+        container.innerHTML = '<p class="text-muted">Ничего не найдено.</p>';
+        return;
+    }
+
+    container.innerHTML = posts.map(post => `
+        <div class="card mb-3">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <h5 class="card-title">
+                        <a href="/posts/${post.id}" class="text-decoration-none">${post.title}</a>
+                    </h5>
+                    ${getSpamBadge(post.is_spam, post.spam_score)}
+                </div>
+                <p class="card-text">${post.content.substring(0, 200)}${post.content.length > 200 ? '...' : ''}</p>
+                <div class="row">
+                    <div class="col">
+                        <small class="text-muted">
+                            <i class="fas fa-user"></i> ${post.author_username} •
+                            <i class="fas fa-clock"></i> ${timeAgo(post.created_at)}
+                        </small>
+                    </div>
+                    <div class="col-auto">
+                        <span class="badge bg-primary">${post.category_name}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `).join('');
+}
+
+
 // Initialize page content
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
@@ -572,5 +656,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (path === '/moderator') {
         loadModeratorPosts();
         loadStats();
+    } else if (path.startsWith('/search')) {
+        handleSearchForm();
     }
 });

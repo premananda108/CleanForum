@@ -8,6 +8,7 @@ from enum import Enum
 import uuid
 import json
 from models.database import db
+from config import settings
 
 class PostStatus(str, Enum):
     DRAFT = "draft"
@@ -273,6 +274,54 @@ class Post:
                 break
 
         return similar_posts
+
+
+    @staticmethod
+    async def search_by_text(query: str, limit: int = 20, offset: int = 0) -> List['PostResponse']:
+        """Полнотекстовый поиск постов с использованием RediSearch."""
+
+        # Экранируем спецсимволы, которые могут сломать запрос RediSearch
+        # Заменяем пробелы на ИЛИ, чтобы искать слова по отдельности
+        clean_query = query.replace("-", "\\-").replace(" ", "|")
+
+        # Запрос ищет совпадения в заголовке или контенте.
+        # Используем `%{...}%` для поиска подстроки и `*` для поиска по префиксу.
+        redis_query = f"(@title|@content:%{clean_query}% | @title|@content:{clean_query}*)"
+
+        try:
+            # Выполняем поиск, возвращая только doc_id
+            search_results = await db.redis_client.execute_command(
+                "FT.SEARCH",
+                settings.VECTOR_INDEX_NAME,
+                redis_query,
+                "LIMIT", offset, limit,
+                "RETURN", "1", "doc_id"
+            )
+        except Exception as e:
+            # В случае ошибки (например, индекс не создан) возвращаем пустой список
+            import logging
+            logging.error(f"Ошибка полнотекстового поиска: {e}")
+            return []
+
+        # Результат: [количество_результатов, doc_id_1, ['doc_id', 'vector:uuid'], ...]
+        if not search_results or search_results[0] == 0:
+            return []
+
+        # Извлекаем ID постов из результата
+        post_ids = [
+            result[1].replace("vector:", "")
+            for result in search_results[1:]
+        ]
+
+        # Получаем полные данные постов по найденным ID
+        posts = []
+        for post_id in post_ids:
+            post = await Post.get_by_id(post_id)
+            # Добавляем только опубликованные посты
+            if post and post.status == PostStatus.PUBLISHED:
+                posts.append(post)
+
+        return posts
 
 
 # Это нужно для обновления ссылок в Pydantic моделях после определения всех классов

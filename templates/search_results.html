@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск по форуму - CleanForum{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <h1><i class="fas fa-search"></i> Поиск по статьям</h1>
+            <p>Используйте форму ниже для поиска по заголовкам и содержимому постов.</p>
+
+            <form id="search-form" class="mb-4">
+                <div class="input-group">
+                    <input type="text" id="search-query" class="form-control" placeholder="Введите ваш запрос..." required minlength="2">
+                    <button type="submit" class="btn btn-primary">Найти</button>
+                </div>
+            </form>
+
+            <hr>
+
+            <div id="search-results-container">
+                <!-- Результаты поиска будут отображены здесь -->
+                <p class="text-muted">Введите запрос для начала поиска.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        // Мы добавим логику в forum.js на следующем шаге.
+        // Этот блок гарантирует, что наш DOMContentLoaded listener в forum.js сработает.
+    </script>
+{% endblock %}
