@@ -39,7 +39,7 @@
 
 ```bash
 # Переходим в директорию проекта
-cd advanced_forum
+cd CleanForum
 
 # Создаем виртуальное окружение
 python -m venv venv
@@ -56,11 +56,12 @@ pip install -r requirements.txt
 #### Вариант 1: Docker
 ```bash
 # Запускаем Redis с Vector Search
-docker run -d --name redis-stack -p 6379:6379 redis/redis-stack:latest
+#docker run -d --name redis-stack -p 6379:6379 redis/redis-stack:latest
+docker run -d --name cleanforum -p 6379:6379 redis:8.0.3-bookworm
 ```
 
 #### Вариант 2: Локальная установка
-Установите Redis Stack или Redis с модулем RediSearch.
+Установите Redis 
 
 ### 3. Настройка окружения
 

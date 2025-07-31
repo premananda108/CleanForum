@@ -71,9 +71,13 @@ async def seed_database():
                 # Создаем основной пост
                 post_id = await Post.create(post_data, author_id)
 
+                # Если пост помечен как спам в датасете, обновляем его статус
+                if item.get('label') == 'spam':
+                    await Post.mark_as_spam(post_id, 1.0, True)
+
                 # Создаем и сохраняем вектор
                 vector = vector_classifier.create_vector(post_data.title, post_data.content, post_data.tags)
-                label = "spam" if item['is_spam'] else "legitimate"
+                label = "spam" if item.get('label') == 'spam' else "legitimate"
                 
                 await vector_manager.add_vector(
                     post_id, vector, label, post_data.title, post_data.content[:200]

@@ -185,11 +185,12 @@ class Post:
 
     @staticmethod
     async def mark_as_spam(post_id: str, spam_score: float, is_spam: bool = True):
-        """Отметить пост как спам"""
+        """Отметить пост как спам и обновить его статус."""
+        status = PostStatus.SPAM.value if is_spam else PostStatus.PUBLISHED.value
         await db.hset(f"post:{post_id}", {
-            "is_spam": is_spam,
+            "is_spam": str(is_spam),
             "spam_score": spam_score,
-            "status": PostStatus.SPAM.value if is_spam else PostStatus.PUBLISHED.value
+            "status": status
         })
 
     @staticmethod
