@@ -236,9 +236,13 @@ class Post:
         if post_data.title is not None:
             update_fields["title"] = post_data.title
         if post_data.content is not None:
-            update_fields["content"] = post_data.content
-            update_fields["reading_time"] = Post.calculate_reading_time(post_data.content)
+            # Обрабатываем контент EditorJS
+            text_content = Post._extract_text_from_editorjs(post_data.content)
+            update_fields["content"] = text_content
+            update_fields["content_json"] = post_data.content
+            update_fields["reading_time"] = Post.calculate_reading_time(text_content)
         if post_data.category_id is not None:
+            # TODO: При смене категории нужно обновить счетчики у старой и новой
             update_fields["category_id"] = post_data.category_id
         if post_data.tags is not None:
             update_fields["tags"] = json.dumps(post_data.tags)

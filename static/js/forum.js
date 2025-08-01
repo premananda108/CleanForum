@@ -770,10 +770,93 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (path.startsWith('/create')) {
         initCreatePostPage();
     } else if (path.startsWith('/posts/')) {
-        const postId = path.split('/').pop();
-        loadPostDetail(postId);
-        handleCommentForm(postId);
+        const parts = path.split('/').filter(p => p);
+        if (parts.length === 3 && parts[2] === 'edit') {
+            // This is handled by the script in edit_post.html
+        } else if (parts.length === 2) {
+            const postId = parts[1];
+            loadPostDetail(postId);
+            handleCommentForm(postId);
+        }
     } else if (path.startsWith('/search')) {
         handleSearchForm();
     }
-})
+});
+
+async function initEditPostPage(postId) {
+    const form = document.getElementById('edit-post-form');
+    const titleInput = document.getElementById('post-title');
+    const categorySelect = document.getElementById('post-category');
+    const tagsInput = document.getElementById('post-tags');
+
+    let editor;
+
+    // 1. Загрузка категорий и данных поста параллельно
+    try {
+        const [categories, post] = await Promise.all([
+            api.getCategories(),
+            api.getPost(postId)
+        ]);
+
+        // Заполняем категории
+        categorySelect.innerHTML = categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
+
+        // Заполняем поля формы
+        titleInput.value = post.title;
+        categorySelect.value = post.category_id;
+        tagsInput.value = post.tags.join(', ');
+
+        // 2. Инициализация EditorJS
+        const editorData = post.content_json ? JSON.parse(post.content_json) : { blocks: [] };
+
+        editor = new EditorJS({
+            holder: 'editorjs',
+            tools: {
+                paragraph: { class: window.Paragraph, inlineToolbar: true },
+                header: { class: window.Header, inlineToolbar: ['link'] },
+                list: { class: window.EditorjsList, inlineToolbar: true },
+                quote: { class: window.Quote, inlineToolbar: true },
+                code: { class: window.CodeTool }
+            },
+            data: editorData,
+            placeholder: 'Начните писать вашу историю...',
+        });
+
+    } catch (error) {
+        console.error('Error loading data for edit page:', error);
+        showAlert('Ошибка загрузки данных для редактирования.', 'danger');
+        if (form) form.innerHTML = '<p class="text-red-500">Не удалось загрузить данные.</p>';
+        return;
+    }
+
+    // 3. Обработка отправки формы
+    if (form) {
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Сохранение...';
+            submitBtn.disabled = true;
+
+            try {
+                const savedData = await editor.save();
+                const postData = {
+                    title: titleInput.value,
+                    content: JSON.stringify(savedData),
+                    category_id: categorySelect.value,
+                    tags: tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag)
+                };
+
+                await api.updatePost(postId, postData);
+                showAlert('Пост успешно обновлен!', 'success');
+                setTimeout(() => window.location.href = `/posts/${postId}`, 1500);
+
+            } catch (error) {
+                console.error('Error updating post:', error);
+                showAlert(error.message || 'Ошибка при обновлении поста.', 'danger');
+                submitBtn.innerHTML = originalText;
+                submitBtn.disabled = false;
+            }
+        });
+    }
+}

@@ -26,8 +26,8 @@
 
                 <!-- Содержание -->
                 <div class="space-y-2">
-                    <label for="post-content" class="block text-sm font-semibold text-gray-700">Содержание</label>
-                    <textarea id="post-content" rows="12" required minlength="10" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-50 focus:border-green-500 transition-all resize-none"></textarea>
+                    <label class="block text-sm font-semibold text-gray-700">Содержание</label>
+                    <div id="editorjs" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus-within:ring-4 focus-within:ring-green-50 focus-within:border-green-500 transition-all"></div>
                 </div>
 
                 <!-- Категория и теги -->
@@ -57,66 +57,25 @@
 {% endblock %}
 
 {% block scripts %}
+{{ super() }}
+<!-- Editor.js and tools -->
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest"></script>
+
 <script>
-    document.addEventListener('DOMContentLoaded', async function() {
+    document.addEventListener('DOMContentLoaded', function() {
         const postId = '{{ post.id }}';
-        const form = document.getElementById('edit-post-form');
-        const titleInput = document.getElementById('post-title');
-        const contentInput = document.getElementById('post-content');
-        const categorySelect = document.getElementById('post-category');
-        const tagsInput = document.getElementById('post-tags');
-
-        // 1. Загрузка категорий
-        try {
-            const categories = await api.getCategories();
-            categorySelect.innerHTML = categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
-        } catch (error) {
-            console.error('Error loading categories:', error);
-            showAlert('Ошибка загрузки категорий', 'danger');
+        // Вызываем новую функцию инициализации со страницы forum.js
+        if (typeof initEditPostPage === 'function') {
+            initEditPostPage(postId);
+        } else {
+            console.error('Функция initEditPostPage не найдена. Убедитесь, что forum.js загружен.');
+            // showAlert('Произошла ошибка при загрузке редактора.', 'danger');
         }
-
-        // 2. Загрузка данных поста
-        try {
-            const post = await api.getPost(postId);
-            titleInput.value = post.title;
-            contentInput.value = post.content;
-            categorySelect.value = post.category_id;
-            tagsInput.value = post.tags.join(', ');
-        } catch (error) {
-            console.error('Error loading post data:', error);
-            showAlert('Ошибка загрузки данных поста', 'danger');
-            form.innerHTML = '<p class="text-red-500">Не удалось загрузить данные для редактирования.</p>';
-        }
-
-        // 3. Обработка отправки формы
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Сохранение...';
-            submitBtn.disabled = true;
-
-            const postData = {
-                title: titleInput.value,
-                content: contentInput.value,
-                category_id: categorySelect.value,
-                tags: tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-            };
-
-            try {
-                await api.updatePost(postId, postData);
-                showAlert('Пост успешно обновлен!', 'success');
-                setTimeout(() => window.location.href = `/posts/${postId}`, 1500);
-            } catch (error) {
-                console.error('Error updating post:', error);
-                showAlert('Ошибка при обновлении поста.', 'danger');
-                submitBtn.innerHTML = originalText;
-                submitBtn.disabled = false;
-            }
-        });
     });
-
-    // Убедитесь, что у вас есть функция showAlert
-    // Она может быть в вашем глобальном JS файле (forum.js)
 </script>
 {% endblock %}
