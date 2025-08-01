@@ -538,7 +538,8 @@ function showAlert(message, type = 'info') {
 }
 
 // Create Post page functions
-async function loadCategoriesIntoSelect() {
+async function initCreatePostPage() {
+    // Загружаем категории в селект
     try {
         const categories = await api.getCategories();
         const select = document.getElementById('post-category');
@@ -547,9 +548,41 @@ async function loadCategoriesIntoSelect() {
     } catch (error) {
         console.error('Error loading categories for select:', error);
     }
-}
 
-async function handleCreatePostForm() {
+    // Инициализируем EditorJS
+    const editor = new EditorJS({
+        holder: 'editorjs',
+        tools: {
+            header: {
+                class: Header,
+                inlineToolbar: ['link'],
+                config: {
+                    placeholder: 'Введите заголовок',
+                    levels: [2, 3, 4],
+                    defaultLevel: 2
+                }
+            },
+            list: {
+                class: List,
+                inlineToolbar: true
+            },
+            quote: {
+                class: Quote,
+                inlineToolbar: true,
+                shortcut: 'CMD+SHIFT+O',
+                config: {
+                    quotePlaceholder: 'Введите цитату',
+                    captionPlaceholder: 'Автор цитаты',
+                },
+            },
+            code: {
+                class: CodeTool
+            }
+        },
+        placeholder: 'Начните писать вашу историю...',
+    });
+
+    // Настраиваем отправку формы
     const form = document.getElementById('create-post-form');
     if (!form) return;
 
@@ -561,20 +594,22 @@ async function handleCreatePostForm() {
         submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Создание поста...';
         submitBtn.disabled = true;
 
-        const postData = {
-            title: document.getElementById('post-title').value,
-            content: JSON.stringify(savedData), // Отправляем JSON
-            category_id: document.getElementById('post-category').value,
-            tags: document.getElementById('post-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
-        };
-
         try {
+            const savedData = await editor.save();
+            const postData = {
+                title: document.getElementById('post-title').value,
+                content: JSON.stringify(savedData),
+                category_id: document.getElementById('post-category').value,
+                tags: document.getElementById('post-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
+            };
+
             const newPost = await api.createPost(postData);
             showAlert('Пост успешно создан! Перенаправление...', 'success');
-            // Перенаправляем на страницу поста через 2 секунды
+
             setTimeout(() => {
                 window.location.href = `/posts/${newPost.id}`;
             }, 2000);
+
         } catch (error) {
             console.error('Error creating post:', error);
             showAlert('Ошибка при создании поста. Проверьте все поля.', 'danger');
@@ -707,8 +742,7 @@ document.addEventListener('DOMContentLoaded', function() {
         loadPosts();
         loadCategories();
     } else if (path.startsWith('/create')) {
-        loadCategoriesIntoSelect();
-        handleCreatePostForm();
+        initCreatePostPage();
     } else if (path.startsWith('/posts/')) {
         const postId = path.split('/').pop();
         loadPostDetail(postId);
