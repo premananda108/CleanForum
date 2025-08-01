@@ -25,7 +25,7 @@ async def create_post(
 ):
     """Создать новый пост"""
     logging.info(f"Попытка создания поста от пользователя {current_user}")
-    logging.debug(f"Данные поста: {post_data.model_dump_json()}")
+    logging.debug(f"Данные поста: {post_data.model_dump_json(exclude={'content'})[:500]}") # Логируем без контента
 
     # Проверяем существование категории
     category = await Category.get_by_id(post_data.category_id)

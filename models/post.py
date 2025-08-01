@@ -32,7 +32,8 @@ class PostUpdate(BaseModel):
 class PostResponse(BaseModel):
     id: str
     title: str
-    content: str
+    content: str  # Это будет чистый текст для превью и SEO
+    content_json: Optional[str] = None  # Это будет исходный JSON от EditorJS для рендеринга
     category_id: str
     category_name: str = ""
     author_id: str
@@ -74,17 +75,10 @@ class Post:
             return content
 
     @staticmethod
-    def calculate_reading_time(content: str) -> int:
-        """Рассчитать время чтения (примерно 200 слов в минуту)"""
-        try:
-            data = json.loads(content)
-            text_content = " ".join([block['data']['text'] for block in data['blocks'] if block['type'] == 'paragraph'])
-            word_count = len(text_content.split())
-            return max(1, word_count // 200)
-        except (json.JSONDecodeError, KeyError):
-            # Fallback для простого текста
-            word_count = len(content.split())
-            return max(1, word_count // 200)
+    def calculate_reading_time(text_content: str) -> int:
+        """Рассчитать время чтения (примерно 200 слов в минуту) на основе чистого текста."""
+        word_count = len(text_content.split())
+        return max(1, word_count // 200)
 
     @staticmethod
     async def create(post_data: PostCreate, author_id: str) -> str:
@@ -95,10 +89,10 @@ class Post:
         post_id = str(uuid.uuid4())
         now = datetime.now()
 
-        # Извлекаем чистый текст для анализа
+        # Извлекаем чистый текст для анализа, поиска и вычисления времени чтения
         text_for_analysis = Post._extract_text_from_editorjs(post_data.content)
 
-        # Сначала проводим анализ, чтобы получить оценку спама
+        # Проводим анализ на спам
         from services.vector_classifier import vector_classifier
         analysis_results = await vector_classifier.analyze_with_vectors(
             post_id, post_data.title, text_for_analysis, post_data.tags, author_id
@@ -107,7 +101,7 @@ class Post:
         is_spam = analysis_results.get("is_spam", False)
         spam_score = analysis_results.get("spam_score", 0.0)
 
-        # Определяем статус поста на основе анализа
+        # Определяем статус поста
         if is_spam:
             status = PostStatus.SPAM
             import logging
@@ -118,7 +112,8 @@ class Post:
         post_info = {
             "id": post_id,
             "title": post_data.title,
-            "content": post_data.content,
+            "content": text_for_analysis,  # Чистый текст для поиска и превью
+            "content_json": post_data.content,  # Исходный JSON для рендеринга
             "category_id": post_data.category_id,
             "author_id": author_id,
             "tags": json.dumps(post_data.tags),
@@ -130,18 +125,16 @@ class Post:
             "vote_score": 0,
             "is_spam": str(is_spam),
             "spam_score": spam_score,
-            "reading_time": Post.calculate_reading_time(post_data.content)
+            "reading_time": Post.calculate_reading_time(text_for_analysis)
         }
 
-        # Сохраняем пост и его анализ в одной транзакции
+        # Сохраняем пост
         async with db.redis_client.pipeline(transaction=True) as pipe:
             pipe.hset(f"post:{post_id}", mapping=post_info)
             timestamp = now.timestamp()
-            # Добавляем в общую ленту в любом случае, чтобы модераторы могли его видеть
             pipe.zadd("posts:all", {post_id: timestamp})
             pipe.zadd(f"posts:author:{author_id}", {post_id: timestamp})
 
-            # В ленту категории и в множество спама добавляем по условию
             if is_spam:
                 pipe.sadd("posts:spam", post_id)
             else:
@@ -175,6 +168,7 @@ class Post:
             id=post_data["id"],
             title=post_data["title"],
             content=post_data["content"],
+            content_json=post_data.get("content_json"),
             category_id=post_data["category_id"],
             category_name=category.name if category else "Unknown",
             author_id=post_data["author_id"],

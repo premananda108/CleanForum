@@ -292,10 +292,12 @@ async function loadPostDetail(postId) {
         let contentToRender;
         try {
             const edjsParser = edjsHTML();
-            const parsedContent = JSON.parse(post.content);
+            // Используем content_json для рендеринга, если он есть, иначе - обычный content
+            const contentSource = post.content_json || post.content;
+            const parsedContent = JSON.parse(contentSource);
             contentToRender = edjsParser.parse(parsedContent).join('');
         } catch (error) {
-            console.warn("Не удалось обработать содержимое поста как данные EditorJS, будет отображен обычный текст.", post.content);
+            console.warn("Не удалось обработать содержимое поста как JSON, будет отображен обычный текст.", post.content);
             contentToRender = post.content.replace(/\n/g, '<br>');
         }
 
