@@ -39,8 +39,11 @@ class Comment:
     """Класс для работы с комментариями"""
 
     @staticmethod
-    async def create(comment_data: CommentCreate, author_id: str) -> str:
-        """Создать новый комментарий с немедленным анализом на спам."""
+    async def create(comment_data: CommentCreate, author_id: str) -> Optional[str]:
+        """
+        Создать новый комментарий с немедленным анализом на спам.
+        Если комментарий определен как спам, он не сохраняется и возвращается None.
+        """
         comment_id = str(uuid.uuid4())
         now = datetime.now()
 
@@ -51,8 +54,15 @@ class Comment:
         )
 
         is_spam = analysis_results.get("is_spam", False)
+
+        # Если комментарий - спам, не сохраняем его
+        if is_spam:
+            import logging
+            logging.warning(f"Комментарий от {author_id} к посту {comment_data.post_id} определен как спам и не будет сохранен.")
+            return None
+
         spam_score = analysis_results.get("spam_score", 0.0)
-        status = CommentStatus.SPAM if is_spam else CommentStatus.PUBLISHED
+        status = CommentStatus.PUBLISHED
 
         comment_info = {
             "id": comment_id,
@@ -62,7 +72,7 @@ class Comment:
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
             "vote_score": 0,
-            "is_spam": str(is_spam),
+            "is_spam": str(is_spam), # будет всегда False
             "spam_score": spam_score,
             "status": status.value
         }
@@ -74,11 +84,8 @@ class Comment:
             pipe.zadd("comments:all", {comment_id: timestamp})
             pipe.zadd(f"comments:post:{comment_data.post_id}", {comment_id: timestamp})
             pipe.zadd(f"comments:author:{author_id}", {comment_id: timestamp})
-            if is_spam:
-                pipe.sadd("comments:spam", comment_id)
             # Обновляем счетчик комментариев в посте
-            if not is_spam:
-                 pipe.hincrby(f"post:{comment_data.post_id}", "comment_count", 1)
+            pipe.hincrby(f"post:{comment_data.post_id}", "comment_count", 1)
             await pipe.execute()
 
         return comment_id

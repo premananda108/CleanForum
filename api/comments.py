@@ -12,8 +12,26 @@ async def get_current_user_id() -> str:
 
 @router.post("/comments", response_model=CommentResponse)
 async def create_comment(comment_data: CommentCreate, current_user: str = Depends(get_current_user_id)):
-    comment_id = await Comment.create(comment_data, current_user)
-    return await Comment.get_by_id(comment_id)
+    try:
+        comment_id = await Comment.create(comment_data, current_user)
+        if comment_id is None:
+            logging.warning(f"Комментарий от {current_user} был отклонен как спам.")
+            raise HTTPException(
+                status_code=422,
+                detail="Ваш комментарий был определен как спам и не может быть опубликован."
+            )
+        
+        comment = await Comment.get_by_id(comment_id)
+        if not comment:
+            raise HTTPException(status_code=500, detail="Ошибка получения комментария после создания")
+        
+        return comment
+
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        logging.error(f"Ошибка при создании комментария: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Внутренняя ошибка при создании комментария")
 
 @router.get("/posts/{post_id}/comments", response_model=List[CommentResponse])
 async def get_post_comments(post_id: str):
