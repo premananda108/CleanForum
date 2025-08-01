@@ -370,24 +370,28 @@ async function loadPostDetail(postId) {
 
         // Добавляем кнопки действий, если текущий пользователь является автором поста
         if (currentUser && post.author_id === currentUser.id) {
-            const actionsContainer = document.createElement('div');
-            actionsContainer.className = 'p-4 bg-gray-100 rounded-xl';
-            actionsContainer.innerHTML = `
-                <h4 class="font-semibold text-gray-800 text-sm mb-2">Действия</h4>
-                <div class="space-y-2">
-                    <a href="/posts/${post.id}/edit" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors flex items-center">
-                        <i class="fas fa-pencil-alt mr-2"></i>
-                        Редактировать пост
-                    </a>
-                    <button
-                        onclick="handleDeletePost('${post.id}')"
-                        class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors flex items-center">
-                        <i class="fas fa-trash-alt mr-2"></i>
-                        Удалить пост
-                    </button>
-                </div>
-            `;
-            metaContainer.querySelector('.space-y-4').appendChild(actionsContainer);
+            // Проверяем, что контейнер для кнопок еще не создан
+            if (!document.getElementById('post-actions-container')) {
+                const actionsContainer = document.createElement('div');
+                actionsContainer.id = 'post-actions-container'; // Добавляем ID для проверки
+                actionsContainer.className = 'p-4 bg-gray-100 rounded-xl';
+                actionsContainer.innerHTML = `
+                    <h4 class="font-semibold text-gray-800 text-sm mb-2">Действия</h4>
+                    <div class="space-y-2">
+                        <a href="/posts/${post.id}/edit" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors flex items-center">
+                            <i class="fas fa-pencil-alt mr-2"></i>
+                            Редактировать пост
+                        </a>
+                        <button
+                            onclick="handleDeletePost('${post.id}')"
+                            class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors flex items-center">
+                            <i class="fas fa-trash-alt mr-2"></i>
+                            Удалить пост
+                        </button>
+                    </div>
+                `;
+                metaContainer.querySelector('.space-y-4').appendChild(actionsContainer);
+            }
         }
 
     } catch (error) {
@@ -446,10 +450,22 @@ async function handleCommentForm(postId) {
     const form = document.getElementById('add-comment-form');
     if (!form) return;
 
+    // Проверяем, не был ли обработчик уже назначен, чтобы избежать дублирования
+    if (form.dataset.commentFormHandled) {
+        return;
+    }
+    form.dataset.commentFormHandled = 'true';
+
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
-        const content = document.getElementById('comment-content').value;
+        const contentInput = document.getElementById('comment-content');
+        const content = contentInput.value.trim();
         const submitBtn = form.querySelector('button[type="submit"]');
+
+        if (!content) {
+            showAlert('Комментарий не может быть пустым.', 'warning');
+            return;
+        }
 
         // Показываем состояние загрузки
         const originalText = submitBtn.innerHTML;
@@ -459,11 +475,11 @@ async function handleCommentForm(postId) {
         try {
             await api.createComment({ post_id: postId, content: content });
             showAlert('Комментарий успешно добавлен!', 'success');
-            document.getElementById('comment-content').value = '';
+            contentInput.value = '';
             await loadComments(postId); // Перезагружаем комментарии
         } catch (error) {
             console.error('Error creating comment:', error);
-            showAlert('Ошибка при добавлении комментария.', 'danger');
+            showAlert(error.message || 'Ошибка при добавлении комментария.', 'danger');
         } finally {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
