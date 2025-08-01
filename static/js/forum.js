@@ -42,6 +42,17 @@ class ForumAPI {
         });
     }
 
+    async deletePost(postId) {
+        return this.request(`/posts/${postId}`, {
+            method: 'DELETE'
+        });
+    }
+
+    // User API
+    async getMe() {
+        return this.request('/users/me');
+    }
+
     // Categories API
     async getCategories() {
         return this.request('/categories');
@@ -245,7 +256,12 @@ async function loadCategories() {
 // Post Detail page functions
 async function loadPostDetail(postId) {
     try {
-        const post = await api.getPost(postId);
+        // Загружаем данные поста и текущего пользователя параллельно
+        const [post, currentUser] = await Promise.all([
+            api.getPost(postId),
+            api.getMe()
+        ]);
+
         const container = document.getElementById('post-detail-container');
         const metaContainer = document.getElementById('post-meta-container');
 
@@ -316,6 +332,22 @@ async function loadPostDetail(postId) {
         // Загружаем и отображаем похожие посты
         if (post.similar_posts) {
             renderSimilarPosts(post.similar_posts);
+        }
+
+        // Добавляем кнопку удаления, если текущий пользователь является автором поста
+        if (currentUser && post.author_id === currentUser.id) {
+            const actionsContainer = document.createElement('div');
+            actionsContainer.className = 'p-4 bg-red-50 rounded-xl';
+            actionsContainer.innerHTML = `
+                <h4 class="font-semibold text-red-800 text-sm mb-2">Действия</h4>
+                <button
+                    onclick="handleDeletePost('${post.id}')"
+                    class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors flex items-center">
+                    <i class="fas fa-trash-alt mr-2"></i>
+                    Удалить пост
+                </button>
+            `;
+            metaContainer.querySelector('.space-y-4').appendChild(actionsContainer);
         }
 
     } catch (error) {

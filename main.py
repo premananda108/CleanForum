@@ -15,7 +15,7 @@ setup_logging()
 from config import settings
 from models.database import db
 from services.vector_classifier import vector_classifier
-from api import posts, comments, categories, moderator, search
+from api import posts, comments, categories, moderator, search, users
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -78,6 +78,7 @@ app.include_router(comments.router, prefix="/api", tags=["comments"])
 app.include_router(categories.router, prefix="/api", tags=["categories"])
 app.include_router(moderator.router, prefix="/api/moderator", tags=["moderator"])
 app.include_router(search.router, prefix="/api", tags=["search"])
+app.include_router(users.router, prefix="/api", tags=["users"])
 
 @app.get("/api/logs")
 async def get_logs():
