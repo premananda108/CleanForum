@@ -14,8 +14,14 @@ class Settings:
     LOG_FILE: str = "logs/forum.log"
 
     # Redis настройки
-    REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
-    REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
+    TESTING: bool = os.getenv("TESTING", "false").lower() == "true"
+    if TESTING:
+        REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+        REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6380))
+    else:
+        REDIS_HOST: str = os.getenv("REDIS_HOST", "localhost")
+        REDIS_PORT: int = int(os.getenv("REDIS_PORT", 6379))
+    
     REDIS_DB: int = int(os.getenv("REDIS_DB", 0))
     REDIS_PASSWORD: Optional[str] = os.getenv("REDIS_PASSWORD")
 

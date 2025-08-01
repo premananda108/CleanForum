@@ -58,7 +58,7 @@ class RedisVectorManager:
             await self.redis_client.execute_command(
                 "FT.CREATE", self.index_name,
                 "ON", "HASH",
-                "PREFIX", "1", "vector:",
+                "PREFIX", "2", "vector:post:", "vector:comment:",
                 "SCHEMA", *schema
             )
             logging.info(f"Создан векторный индекс {self.index_name}")
