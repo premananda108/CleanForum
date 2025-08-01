@@ -91,6 +91,9 @@ async function loadModeratorPosts() {
                         <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition" onclick="moderatePost('${post.id}', 'mark_spam')">
                             <i class="fas fa-ban"></i>
                         </button>
+                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition" onclick="deletePost('${post.id}')">
+                            <i class="fas fa-trash"></i>
+                        </button>
                         <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition" onclick="showPostSpamAnalysis('${post.id}')">
                             <i class="fas fa-search"></i>
                         </button>
@@ -112,6 +115,20 @@ async function moderatePost(postId, action) {
     } catch (error) {
         console.error('Error moderating post:', error);
         showAlert('Ошибка модерации поста', 'danger');
+    }
+}
+
+async function deletePost(postId) {
+    if (!confirm('Вы уверены, что хотите удалить этот пост?')) {
+        return;
+    }
+    try {
+        await api.deletePost(postId);
+        showAlert('Пост успешно удален', 'success');
+        await loadModeratorPosts();
+    } catch (error) {
+        console.error('Error deleting post:', error);
+        showAlert('Ошибка удаления поста', 'danger');
     }
 }
 
