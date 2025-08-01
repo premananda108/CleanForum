@@ -36,8 +36,17 @@ async def create_post(
     # Создаем пост
     try:
         post_id = await Post.create(post_data, current_user)
-        logging.info(f"Пост {post_id} успешно создан и проанализирован.")
+        if post_id is None:
+            logging.warning(f"Пост от {current_user} был отклонен как спам.")
+            raise HTTPException(
+                status_code=422,
+                detail="Ваш пост был определен как спам и не может быть опубликован."
+            )
+        logging.info(f"Пост {post_id} успешно создан.")
     except Exception as e:
+        # Перехватываем и наш HTTPException
+        if isinstance(e, HTTPException):
+            raise e
         logging.error(f"Ошибка при создании поста в БД: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка при создании поста")
 
@@ -47,8 +56,9 @@ async def create_post(
     # Получаем созданный пост
     post = await Post.get_by_id(post_id)
     if not post:
+        # Эта ситуация маловероятна, если post_id был получен
         logging.error(f"Не удалось получить пост {post_id} после создания.")
-        raise HTTPException(status_code=500, detail="Ошибка создания поста")
+        raise HTTPException(status_code=500, detail="Ошибка получения поста после создания")
 
     logging.info(f"Пост {post_id} успешно обработан и возвращен клиенту.")
     return post

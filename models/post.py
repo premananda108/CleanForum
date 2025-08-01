@@ -59,8 +59,11 @@ class Post:
         return max(1, word_count // 200)
 
     @staticmethod
-    async def create(post_data: PostCreate, author_id: str) -> str:
-        """Создать новый пост с немедленным анализом на спам."""
+    async def create(post_data: PostCreate, author_id: str) -> Optional[str]:
+        """
+        Создать новый пост с немедленным анализом на спам.
+        Если пост определен как спам, он не сохраняется и возвращается None.
+        """
         post_id = str(uuid.uuid4())
         now = datetime.now()
 
@@ -71,8 +74,17 @@ class Post:
         )
 
         is_spam = analysis_results.get("is_spam", False)
+
+        # Если пост - спам, не сохраняем его
+        if is_spam:
+            import logging
+            logging.warning(f"Пост от {author_id} с заголовком '{post_data.title}' определен как спам и не будет сохранен.")
+            # Можно дополнительно сохранить информацию о спаме для анализа
+            # await db.hset(f"spam_attempt:{post_id}", mapping=analysis_results)
+            return None
+
         spam_score = analysis_results.get("spam_score", 0.0)
-        status = PostStatus.SPAM if is_spam else PostStatus.PUBLISHED
+        status = PostStatus.PUBLISHED
 
         post_info = {
             "id": post_id,
@@ -87,7 +99,7 @@ class Post:
             "view_count": 0,
             "comment_count": 0,
             "vote_score": 0,
-            "is_spam": str(is_spam),
+            "is_spam": str(is_spam), # будет всегда False здесь
             "spam_score": spam_score,
             "reading_time": Post.calculate_reading_time(post_data.content)
         }
@@ -99,8 +111,6 @@ class Post:
             pipe.zadd("posts:all", {post_id: timestamp})
             pipe.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
             pipe.zadd(f"posts:author:{author_id}", {post_id: timestamp})
-            if is_spam:
-                pipe.sadd("posts:spam", post_id)
             await pipe.execute()
 
         return post_id
