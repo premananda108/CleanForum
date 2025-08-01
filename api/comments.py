@@ -8,7 +8,8 @@ import uuid
 router = APIRouter()
 
 async def get_current_user_id() -> str:
-    return "user_demo_" + str(uuid.uuid4())[:8]
+    """Временная заглушка для получения ID пользователя. Всегда возвращает одного и того же пользователя."""
+    return "user_demo_12345"
 
 @router.post("/comments", response_model=CommentResponse)
 async def create_comment(comment_data: CommentCreate, current_user: str = Depends(get_current_user_id)):

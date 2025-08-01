@@ -399,6 +399,21 @@ async function handleCommentForm(postId) {
     });
 }
 
+async function handleDeletePost(postId) {
+    if (confirm('Вы уверены, что хотите удалить этот пост? Это действие необратимо.')) {
+        try {
+            await api.deletePost(postId);
+            showAlert('Пост успешно удален. Перенаправление на главную...', 'success');
+            setTimeout(() => {
+                window.location.href = '/';
+            }, 2000);
+        } catch (error) {
+            console.error('Error deleting post:', error);
+            showAlert('Ошибка при удалении поста. Возможно, у вас нет прав.', 'danger');
+        }
+    }
+}
+
 function renderSimilarPosts(posts) {
     const container = document.getElementById('similar-posts-container');
     if (!container) return;

@@ -14,9 +14,9 @@ router = APIRouter()
 
 # Временная функция для получения текущего пользователя
 async def get_current_user_id() -> str:
-    """Временная заглушка для получения ID пользователя"""
+    """Временная заглушка для получения ID пользователя. Всегда возвращает одного и того же пользователя."""
     # В реальном приложении здесь будет JWT авторизация
-    return "user_demo_" + str(uuid.uuid4())[:8]
+    return "user_demo_12345"
 
 @router.post("/posts", response_model=PostResponse)
 async def create_post(
@@ -129,28 +129,38 @@ async def update_post(
     post = await Post.get_by_id(post_id)
     return post
 
-@router.delete("/posts/{post_id}")
+@router.delete("/posts/{post_id}", status_code=204)
 async def delete_post(
     post_id: str,
-    current_user: str = Depends(get_current_user_id)
+    current_user_id: str = Depends(get_current_user_id)
 ):
-    """Удалить пост (помечает как удаленный)"""
+    """
+    Удалить пост. Доступно только автору поста.
+    """
+    logging.info(f"Попытка удаления поста {post_id} пользователем {current_user_id}")
 
-    # Проверяем существование поста
-    existing_post = await Post.get_by_id(post_id)
+    # 1. Проверяем существование поста
+    existing_post = await Post.get_by_id(post_id, increment_views=False)
     if not existing_post:
+        logging.warning(f"Попытка удаления несуществующего поста {post_id}")
         raise HTTPException(status_code=404, detail="Пост не найден")
 
-    # В реальном приложении здесь проверка прав
+    # 2. Проверяем права на удаление
+    if existing_post.author_id != current_user_id:
+        logging.error(f"Пользователь {current_user_id} пытался удалить чужой пост {post_id} (автор: {existing_post.author_id})")
+        raise HTTPException(status_code=403, detail="У вас нет прав для удаления этого поста")
 
-    # Помечаем как удаленный
-    from models.post import PostStatus
-    await Post.mark_as_spam(post_id, 0.0, False)  # Сбрасываем спам
+    # 3. Помечаем пост как удаленный
+    success = await Post.mark_as_deleted(post_id)
+    if not success:
+        # Эта ошибка может произойти, если пост был удален между get_by_id и mark_as_deleted
+        logging.error(f"Произошла ошибка при попытке пометить пост {post_id} как удаленный")
+        raise HTTPException(status_code=500, detail="Ошибка при удалении поста")
 
-    # Обновляем счетчик в категории
-    await Category.update_post_count(existing_post.category_id, -1)
-
-    return {"message": "Пост удален"}
+    logging.info(f"Пост {post_id} успешно помечен как удаленный пользователем {current_user_id}")
+    
+    # Возвращаем 204 No Content, как принято для DELETE запросов
+    return
 
 @router.get("/posts/{post_id}/spam-analysis")
 async def get_spam_analysis(post_id: str):

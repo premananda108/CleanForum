@@ -235,6 +235,52 @@ class Post:
             await db.srem("posts:spam", post_id)
 
     @staticmethod
+    async def mark_as_deleted(post_id: str) -> bool:
+        """
+        Помечает пост как удаленный (мягкое удаление).
+        Удаляет пост из всех списков, обновляет счетчики и удаляет вектор.
+        """
+        # 1. Получаем данные поста, чтобы знать author_id и category_id
+        post_data = await db.hgetall(f"post:{post_id}")
+        if not post_data:
+            return False  # Пост не найден
+
+        author_id = post_data.get("author_id")
+        category_id = post_data.get("category_id")
+
+        # 2. Используем транзакцию для атомарности
+        async with db.redis_client.pipeline(transaction=True) as pipe:
+            # Помечаем пост как удаленный
+            pipe.hset(f"post:{post_id}", "status", PostStatus.DELETED.value)
+
+            # Удаляем ID поста из всех отсортированных множеств
+            pipe.zrem("posts:all", post_id)
+            if category_id:
+                pipe.zrem(f"posts:category:{category_id}", post_id)
+            if author_id:
+                pipe.zrem(f"posts:author:{author_id}", post_id)
+
+            # Удаляем из множества спама, если он там был
+            pipe.srem("posts:spam", post_id)
+
+            # Выполняем транзакцию
+            await pipe.execute()
+
+        # 3. Обновляем счетчик постов в категории (вне транзакции)
+        if category_id:
+            from models.category import Category
+            await Category.update_post_count(category_id, -1)
+
+        # 4. Удаляем вектор из поискового индекса (вне транзакции)
+        from services.redis_manager import vector_manager
+        await vector_manager.delete_vector(f"post:{post_id}")
+        
+        import logging
+        logging.info(f"Пост {post_id} был помечен как удаленный.")
+
+        return True
+
+    @staticmethod
     async def update_comment_count(post_id: str, delta: int = 1):
         """Обновить количество комментариев"""
         post_data = await db.hgetall(f"post:{post_id}")
