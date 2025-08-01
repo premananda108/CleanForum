@@ -4,7 +4,7 @@ API роуты для работы с постами
 from fastapi import APIRouter, HTTPException, Depends, Query
 import logging
 from typing import List, Optional
-from models.post import Post, PostCreate, PostUpdate, PostResponse
+from models.post import Post, PostCreate, PostUpdate, PostResponse, PostStatus
 from models.category import Category
 from models.user import User, UserRole
 from services.vector_classifier import vector_classifier
@@ -33,34 +33,28 @@ async def create_post(
         logging.warning(f"Категория {post_data.category_id} не найдена.")
         raise HTTPException(status_code=404, detail="Категория не найдена")
 
-    # Создаем пост
+    # Создаем пост. Метод Post.create теперь всегда возвращает ID.
     try:
         post_id = await Post.create(post_data, current_user)
-        if post_id is None:
-            logging.warning(f"Пост от {current_user} был отклонен как спам.")
-            raise HTTPException(
-                status_code=422,
-                detail="Ваш пост был определен как спам и не может быть опубликован."
-            )
-        logging.info(f"Пост {post_id} успешно создан.")
+        logging.info(f"Пост {post_id} успешно сохранен в БД.")
     except Exception as e:
-        # Перехватываем и наш HTTPException
-        if isinstance(e, HTTPException):
-            raise e
         logging.error(f"Ошибка при создании поста в БД: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка при создании поста")
 
-    # Обновляем счетчик постов в категории
-    await Category.update_post_count(post_data.category_id, 1)
-
-    # Получаем созданный пост
-    post = await Post.get_by_id(post_id)
+    # Получаем созданный пост, чтобы проверить его статус
+    post = await Post.get_by_id(post_id, increment_views=False)
     if not post:
-        # Эта ситуация маловероятна, если post_id был получен
         logging.error(f"Не удалось получить пост {post_id} после создания.")
         raise HTTPException(status_code=500, detail="Ошибка получения поста после создания")
 
-    logging.info(f"Пост {post_id} успешно обработан и возвращен клиенту.")
+    # Обновляем счетчик постов в категории, только если пост был опубликован
+    if post.status == PostStatus.PUBLISHED:
+        await Category.update_post_count(post_data.category_id, 1)
+        logging.info(f"Счетчик для категории {post_data.category_id} обновлен.")
+    else:
+        logging.info(f"Пост {post_id} помечен как спам, счетчик категории не обновлен.")
+
+    logging.info(f"Пост {post_id} успешно обработан и возвращен клиенту со статусом '{post.status.value}'.")
     return post
 
 @router.get("/posts", response_model=List[PostResponse])

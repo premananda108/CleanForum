@@ -87,10 +87,10 @@ class Post:
             return max(1, word_count // 200)
 
     @staticmethod
-    async def create(post_data: PostCreate, author_id: str) -> Optional[str]:
+    async def create(post_data: PostCreate, author_id: str) -> str:
         """
         Создать новый пост с немедленным анализом на спам.
-        Если пост определен как спам, он не сохраняется и возвращается None.
+        Пост сохраняется всегда, но получает статус SPAM, если классифицирован как спам.
         """
         post_id = str(uuid.uuid4())
         now = datetime.now()
@@ -105,17 +105,15 @@ class Post:
         )
 
         is_spam = analysis_results.get("is_spam", False)
-
-        # Если пост - спам, не сохраняем его
-        if is_spam:
-            import logging
-            logging.warning(f"Пост от {author_id} с заголовком '{post_data.title}' определен как спам и не будет сохранен.")
-            # Можно дополнительно сохранить информацию о спаме для анализа
-            # await db.hset(f"spam_attempt:{post_id}", mapping=analysis_results)
-            return None
-
         spam_score = analysis_results.get("spam_score", 0.0)
-        status = PostStatus.PUBLISHED
+
+        # Определяем статус поста на основе анализа
+        if is_spam:
+            status = PostStatus.SPAM
+            import logging
+            logging.warning(f"Пост {post_id} от {author_id} определен как СПАМ (score: {spam_score:.2f}) и отправлен на модерацию.")
+        else:
+            status = PostStatus.PUBLISHED
 
         post_info = {
             "id": post_id,
@@ -130,7 +128,7 @@ class Post:
             "view_count": 0,
             "comment_count": 0,
             "vote_score": 0,
-            "is_spam": str(is_spam), # будет всегда False здесь
+            "is_spam": str(is_spam),
             "spam_score": spam_score,
             "reading_time": Post.calculate_reading_time(post_data.content)
         }
@@ -139,9 +137,16 @@ class Post:
         async with db.redis_client.pipeline(transaction=True) as pipe:
             pipe.hset(f"post:{post_id}", mapping=post_info)
             timestamp = now.timestamp()
+            # Добавляем в общую ленту в любом случае, чтобы модераторы могли его видеть
             pipe.zadd("posts:all", {post_id: timestamp})
-            pipe.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
             pipe.zadd(f"posts:author:{author_id}", {post_id: timestamp})
+
+            # В ленту категории и в множество спама добавляем по условию
+            if is_spam:
+                pipe.sadd("posts:spam", post_id)
+            else:
+                pipe.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
+
             await pipe.execute()
 
         return post_id

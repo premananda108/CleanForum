@@ -16,7 +16,18 @@ class ForumAPI {
         });
 
         if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
+            // Пытаемся получить детальное сообщение об ошибке из тела ответа
+            try {
+                const errorData = await response.json();
+                // FastAPI часто использует поле 'detail' для ошибок
+                const message = errorData.detail || `HTTP error! status: ${response.status}`;
+                const error = new Error(message);
+                error.response = response; // Прикрепляем ответ для доп. контекста
+                throw error;
+            } catch (e) {
+                // Если тело ответа не JSON или пустое, выбрасываем общую ошибку
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
         }
 
         if (response.status === 204) {
@@ -609,15 +620,23 @@ async function initCreatePostPage() {
             };
 
             const newPost = await api.createPost(postData);
-            showAlert('Пост успешно создан! Перенаправление...', 'success');
 
-            setTimeout(() => {
-                window.location.href = `/posts/${newPost.id}`;
-            }, 2000);
+            if (newPost.status === 'spam') {
+                showAlert('Ваш пост отправлен на проверку и будет опубликован после одобрения модератором.', 'warning');
+                setTimeout(() => {
+                    window.location.href = '/'; // Перенаправляем на главную
+                }, 3000);
+            } else {
+                showAlert('Пост успешно создан! Перенаправление...', 'success');
+                setTimeout(() => {
+                    window.location.href = `/posts/${newPost.id}`;
+                }, 2000);
+            }
 
         } catch (error) {
             console.error('Error creating post:', error);
-            showAlert('Ошибка при создании поста. Проверьте все поля.', 'danger');
+            // Используем детальное сообщение об ошибке, полученное от API
+            showAlert(error.message || 'Произошла неизвестная ошибка. Пожалуйста, попробуйте еще раз.', 'danger');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }
