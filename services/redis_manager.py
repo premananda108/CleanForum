@@ -171,5 +171,22 @@ class RedisVectorManager:
             logging.error(f"Vector Manager: ошибка удаления вектора {doc_id}: {e}")
             return False
 
+    async def update_vector_label(self, doc_id: str, new_label: str) -> bool:
+        """Обновить метку (label) для существующего вектора."""
+        try:
+            doc_key = f"vector:{doc_id}"
+            # Проверяем, существует ли документ
+            if not await self.redis_client.exists(doc_key):
+                logging.warning(f"Vector Manager: попытка обновить несуществующий вектор {doc_id}")
+                return False
+
+            # Обновляем только поле label
+            await self.redis_client.hset(doc_key, "label", new_label)
+            logging.info(f"Vector Manager: метка для вектора {doc_id} обновлена на '{new_label}'.")
+            return True
+        except Exception as e:
+            logging.error(f"Vector Manager: ошибка обновления метки для вектора {doc_id}: {e}")
+            return False
+
 # Глобальный экземпляр менеджера
 vector_manager = RedisVectorManager()

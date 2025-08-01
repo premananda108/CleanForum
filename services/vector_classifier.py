@@ -227,8 +227,13 @@ class VectorSpamClassifier:
         # Обновляем метку в векторной базе
         vector_doc_id = f"{entity_type}:{entity_id}"
         new_label = "spam" if is_spam else "legitimate"
-        # (В реальной системе здесь может быть более сложная логика обновления)
-        logging.info(f"Обратная связь для {entity_type} {entity_id} сохранена. Метка для вектора {vector_doc_id} должна быть обновлена на '{new_label}'.")
+        
+        # Немедленно обновляем метку в Redis
+        success = await vector_manager.update_vector_label(vector_doc_id, new_label)
+        if success:
+            logging.info(f"Метка для вектора {vector_doc_id} успешно обновлена на '{new_label}'.")
+        else:
+            logging.error(f"Не удалось обновить метку для вектора {vector_doc_id}.")
 
     async def get_classification_stats(self) -> Dict[str, Any]:
         """Получить статистику классификации"""
