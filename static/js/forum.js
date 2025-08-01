@@ -553,8 +553,12 @@ async function initCreatePostPage() {
     const editor = new EditorJS({
         holder: 'editorjs',
         tools: {
+            paragraph: {
+                class: window.Paragraph,
+                inlineToolbar: true,
+            },
             header: {
-                class: Header,
+                class: window.Header,
                 inlineToolbar: ['link'],
                 config: {
                     placeholder: 'Введите заголовок',
@@ -563,11 +567,11 @@ async function initCreatePostPage() {
                 }
             },
             list: {
-                class: List,
+                class: window.EditorjsList,
                 inlineToolbar: true
             },
             quote: {
-                class: Quote,
+                class: window.Quote,
                 inlineToolbar: true,
                 shortcut: 'CMD+SHIFT+O',
                 config: {
@@ -576,10 +580,11 @@ async function initCreatePostPage() {
                 },
             },
             code: {
-                class: CodeTool
+                class: window.CodeTool
             }
         },
         placeholder: 'Начните писать вашу историю...',
+        defaultBlock: 'paragraph',
     });
 
     // Настраиваем отправку формы
