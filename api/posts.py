@@ -25,7 +25,7 @@ async def create_post(
 ):
     """Создать новый пост"""
     logging.info(f"Попытка создания поста от пользователя {current_user}")
-    logging.debug(f"Данные поста: {post_data.model_dump_json(exclude={'content'})[:500]}") # Логируем без контента
+    logging.debug(f"Данные поста: {post_data.model_dump_json(exclude={'content'})[:500]}")
 
     # Проверяем существование категории
     category = await Category.get_by_id(post_data.category_id)
@@ -33,28 +33,34 @@ async def create_post(
         logging.warning(f"Категория {post_data.category_id} не найдена.")
         raise HTTPException(status_code=404, detail="Категория не найдена")
 
-    # Создаем пост. Метод Post.create теперь всегда возвращает ID.
     try:
         post_id = await Post.create(post_data, current_user)
+        if post_id is None:
+            logging.warning(f"Пост от {current_user} был отклонен как спам.")
+            raise HTTPException(
+                status_code=422,
+                detail="Ваш пост был определен как спам и не может быть опубликован."
+            )
+        
         logging.info(f"Пост {post_id} успешно сохранен в БД.")
+
+    except HTTPException as e:
+        raise e
     except Exception as e:
         logging.error(f"Ошибка при создании поста в БД: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="Внутренняя ошибка при создании поста")
 
-    # Получаем созданный пост, чтобы проверить его статус
+    # Получаем созданный пост
     post = await Post.get_by_id(post_id, increment_views=False)
     if not post:
         logging.error(f"Не удалось получить пост {post_id} после создания.")
         raise HTTPException(status_code=500, detail="Ошибка получения поста после создания")
 
-    # Обновляем счетчик постов в категории, только если пост был опубликован
-    if post.status == PostStatus.PUBLISHED:
-        await Category.update_post_count(post_data.category_id, 1)
-        logging.info(f"Счетчик для категории {post_data.category_id} обновлен.")
-    else:
-        logging.info(f"Пост {post_id} помечен как спам, счетчик категории не обновлен.")
+    # Обновляем счетчик постов в категории
+    await Category.update_post_count(post_data.category_id, 1)
+    logging.info(f"Счетчик для категории {post_data.category_id} обновлен.")
 
-    logging.info(f"Пост {post_id} успешно обработан и возвращен клиенту со статусом '{post.status.value}'.")
+    logging.info(f"Пост {post_id} успешно обработан и возвращен клиенту.")
     return post
 
 @router.get("/posts", response_model=List[PostResponse])
@@ -108,21 +114,33 @@ async def update_post(
     if not success:
         raise HTTPException(status_code=500, detail="Ошибка обновления поста")
 
-    # Если обновился контент, повторно анализируем на спам
-    if post_data.content is not None or post_data.title is not None:
-        updated_post = await Post.get_by_id(post_id)
+    # Если обновился контент или заголовок, повторно анализируем на спам
+    if post_data.content is not None or post_data.title is not None or post_data.tags is not None:
+        updated_post = await Post.get_by_id(post_id, increment_views=False)
         if updated_post:
-            text_for_analysis = Post._extract_text_from_editorjs(updated_post.content)
-            spam_analysis = await vector_classifier.analyze_with_vectors(
-                post_id, updated_post.title, text_for_analysis, 
-                updated_post.tags, updated_post.author_id
+            text_for_analysis = Post._extract_text_from_editorjs(updated_post.content_json or '')
+            
+            analysis_results = await vector_classifier.analyze_with_vectors(
+                post_id, 
+                updated_post.title, 
+                text_for_analysis, 
+                updated_post.tags, 
+                updated_post.author_id
             )
 
-            if spam_analysis["is_spam"]:
-                await Post.mark_as_spam(post_id, spam_analysis["spam_score"], True)
+            if analysis_results.get("is_spam", False):
+                # Если пост после редактирования стал спамом, он удаляется
+                await Post.mark_as_deleted(post_id)
+                raise HTTPException(
+                    status_code=422,
+                    detail="Ваш пост после редактирования был определен как спам и удален."
+                )
 
     # Возвращаем обновленный пост
     post = await Post.get_by_id(post_id)
+    if not post:
+        raise HTTPException(status_code=404, detail="Пост не найден после обновления")
+    
     return post
 
 @router.delete("/posts/{post_id}", status_code=204)

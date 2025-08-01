@@ -81,10 +81,10 @@ class Post:
         return max(1, word_count // 200)
 
     @staticmethod
-    async def create(post_data: PostCreate, author_id: str) -> str:
+    async def create(post_data: PostCreate, author_id: str) -> Optional[str]:
         """
         Создать новый пост с немедленным анализом на спам.
-        Пост сохраняется всегда, но получает статус SPAM, если классифицирован как спам.
+        Если пост определен как спам, он не сохраняется и возвращается None.
         """
         post_id = str(uuid.uuid4())
         now = datetime.now()
@@ -99,15 +99,16 @@ class Post:
         )
 
         is_spam = analysis_results.get("is_spam", False)
-        spam_score = analysis_results.get("spam_score", 0.0)
 
-        # Определяем статус поста
+        # Если пост - спам, не сохраняем его
         if is_spam:
-            status = PostStatus.SPAM
             import logging
-            logging.warning(f"Пост {post_id} от {author_id} определен как СПАМ (score: {spam_score:.2f}) и отправлен на модерацию.")
-        else:
-            status = PostStatus.PUBLISHED
+            spam_score = analysis_results.get("spam_score", 0.0)
+            logging.warning(f"Пост от {author_id} определен как СПАМ (score: {spam_score:.2f}) и не будет сохранен.")
+            return None
+
+        spam_score = analysis_results.get("spam_score", 0.0)
+        status = PostStatus.PUBLISHED
 
         post_info = {
             "id": post_id,
@@ -123,7 +124,7 @@ class Post:
             "view_count": 0,
             "comment_count": 0,
             "vote_score": 0,
-            "is_spam": str(is_spam),
+            "is_spam": str(is_spam), # будет всегда False
             "spam_score": spam_score,
             "reading_time": Post.calculate_reading_time(text_for_analysis)
         }
@@ -134,12 +135,7 @@ class Post:
             timestamp = now.timestamp()
             pipe.zadd("posts:all", {post_id: timestamp})
             pipe.zadd(f"posts:author:{author_id}", {post_id: timestamp})
-
-            if is_spam:
-                pipe.sadd("posts:spam", post_id)
-            else:
-                pipe.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
-
+            pipe.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
             await pipe.execute()
 
         return post_id
@@ -232,24 +228,32 @@ class Post:
             return False
 
         update_fields = {}
+        reanalyze_spam = False
 
         if post_data.title is not None:
             update_fields["title"] = post_data.title
+            reanalyze_spam = True
         if post_data.content is not None:
-            # Обрабатываем контент EditorJS
             text_content = Post._extract_text_from_editorjs(post_data.content)
             update_fields["content"] = text_content
             update_fields["content_json"] = post_data.content
             update_fields["reading_time"] = Post.calculate_reading_time(text_content)
+            reanalyze_spam = True
         if post_data.category_id is not None:
-            # TODO: При смене категории нужно обновить счетчики у старой и новой
             update_fields["category_id"] = post_data.category_id
         if post_data.tags is not None:
             update_fields["tags"] = json.dumps(post_data.tags)
+            reanalyze_spam = True
 
         if update_fields:
             update_fields["updated_at"] = datetime.now().isoformat()
-            await db.hset(f"post:{post_id}", update_fields)
+            # Сбрасываем статус спама при любом обновлении, чтобы запустить повторную проверку
+            if reanalyze_spam:
+                update_fields["is_spam"] = str(False)
+                update_fields["spam_score"] = 0.0
+                update_fields["status"] = PostStatus.PUBLISHED.value
+            
+            await db.hset(f"post:{post_id}", mapping=update_fields)
 
         return True
 
