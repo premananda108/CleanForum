@@ -104,6 +104,16 @@ async def post_detail(request: Request, post_id: str):
         "post_id": post_id
     })
 
+@app.get("/posts/{post_id}/edit")
+async def edit_post_page(request: Request, post_id: str):
+    """Страница редактирования поста"""
+    from models.post import Post
+    post = await Post.get_by_id(post_id, increment_views=False)
+    if not post:
+        return templates.TemplateResponse("404.html", {"request": request}, status_code=404)
+    return templates.TemplateResponse("edit_post.html", {"request": request, "post": post})
+
+
 @app.get("/create")
 async def create_post_page(request: Request):
     """Страница создания поста"""

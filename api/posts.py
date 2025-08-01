@@ -105,8 +105,9 @@ async def update_post(
     if not existing_post:
         raise HTTPException(status_code=404, detail="Пост не найден")
 
-    # Проверяем права на редактирование (в демо-версии пропускаем)
-    # В реальном приложении здесь проверка, что current_user == existing_post.author_id
+    # Проверяем права на редактирование
+    if existing_post.author_id != current_user:
+        raise HTTPException(status_code=403, detail="У вас нет прав для редактирования этого поста")
 
     # Обновляем пост
     success = await Post.update(post_id, post_data)

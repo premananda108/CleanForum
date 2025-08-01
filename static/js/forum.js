@@ -52,6 +52,13 @@ class ForumAPI {
         });
     }
 
+    async updatePost(postId, postData) {
+        return this.request(`/posts/${postId}`, {
+            method: 'PUT',
+            body: JSON.stringify(postData)
+        });
+    }
+
     // User API
     async getMe() {
         return this.request('/users/me');
@@ -341,12 +348,16 @@ async function loadPostDetail(postId) {
         // Добавляем кнопку удаления, если текущий пользователь является автором поста
         if (currentUser && post.author_id === currentUser.id) {
             const actionsContainer = document.createElement('div');
-            actionsContainer.className = 'p-4 bg-red-50 rounded-xl';
+            actionsContainer.className = 'p-4 bg-yellow-50 rounded-xl';
             actionsContainer.innerHTML = `
-                <h4 class="font-semibold text-red-800 text-sm mb-2">Действия</h4>
+                <h4 class="font-semibold text-yellow-800 text-sm mb-2">Действия</h4>
+                <a href="/posts/${post.id}/edit" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors flex items-center">
+                    <i class="fas fa-pencil-alt mr-2"></i>
+                    Редактировать пост
+                </a>
                 <button
                     onclick="handleDeletePost('${post.id}')"
-                    class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors flex items-center">
+                    class="w-full text-left px-3 py-2 mt-2 rounded-lg text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors flex items-center">
                     <i class="fas fa-trash-alt mr-2"></i>
                     Удалить пост
                 </button>
