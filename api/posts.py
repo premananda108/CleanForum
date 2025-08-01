@@ -118,8 +118,9 @@ async def update_post(
     if post_data.content is not None or post_data.title is not None:
         updated_post = await Post.get_by_id(post_id)
         if updated_post:
+            text_for_analysis = Post._extract_text_from_editorjs(updated_post.content)
             spam_analysis = await vector_classifier.analyze_with_vectors(
-                post_id, updated_post.title, updated_post.content, 
+                post_id, updated_post.title, text_for_analysis, 
                 updated_post.tags, updated_post.author_id
             )
 

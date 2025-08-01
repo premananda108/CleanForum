@@ -278,6 +278,16 @@ async function loadPostDetail(postId) {
 
         document.title = `${post.title} - CleanForum`;
 
+        let contentToRender;
+        try {
+            const edjsParser = edjsHTML();
+            const parsedContent = JSON.parse(post.content);
+            contentToRender = edjsParser.parse(parsedContent).join('');
+        } catch (error) {
+            console.warn("Не удалось обработать содержимое поста как данные EditorJS, будет отображен обычный текст.", post.content);
+            contentToRender = post.content.replace(/\n/g, '<br>');
+        }
+
         container.innerHTML = `
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
                 <div class="p-8">
@@ -302,7 +312,7 @@ async function loadPostDetail(postId) {
                     </div>
 
                     <div class="prose max-w-none text-gray-700 leading-relaxed">
-                        ${post.content.replace(/\n/g, '<br>')}
+                        ${contentToRender}
                     </div>
                 </div>
             </div>
@@ -345,22 +355,24 @@ async function loadPostDetail(postId) {
             renderSimilarPosts(post.similar_posts);
         }
 
-        // Добавляем кнопку удаления, если текущий пользователь является автором поста
+        // Добавляем кнопки действий, если текущий пользователь является автором поста
         if (currentUser && post.author_id === currentUser.id) {
             const actionsContainer = document.createElement('div');
-            actionsContainer.className = 'p-4 bg-yellow-50 rounded-xl';
+            actionsContainer.className = 'p-4 bg-gray-100 rounded-xl';
             actionsContainer.innerHTML = `
-                <h4 class="font-semibold text-yellow-800 text-sm mb-2">Действия</h4>
-                <a href="/posts/${post.id}/edit" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-yellow-100 text-yellow-800 hover:bg-yellow-200 transition-colors flex items-center">
-                    <i class="fas fa-pencil-alt mr-2"></i>
-                    Редактировать пост
-                </a>
-                <button
-                    onclick="handleDeletePost('${post.id}')"
-                    class="w-full text-left px-3 py-2 mt-2 rounded-lg text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors flex items-center">
-                    <i class="fas fa-trash-alt mr-2"></i>
-                    Удалить пост
-                </button>
+                <h4 class="font-semibold text-gray-800 text-sm mb-2">Действия</h4>
+                <div class="space-y-2">
+                    <a href="/posts/${post.id}/edit" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors flex items-center">
+                        <i class="fas fa-pencil-alt mr-2"></i>
+                        Редактировать пост
+                    </a>
+                    <button
+                        onclick="handleDeletePost('${post.id}')"
+                        class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors flex items-center">
+                        <i class="fas fa-trash-alt mr-2"></i>
+                        Удалить пост
+                    </button>
+                </div>
             `;
             metaContainer.querySelector('.space-y-4').appendChild(actionsContainer);
         }
@@ -551,7 +563,7 @@ async function handleCreatePostForm() {
 
         const postData = {
             title: document.getElementById('post-title').value,
-            content: document.getElementById('post-content').value,
+            content: JSON.stringify(savedData), // Отправляем JSON
             category_id: document.getElementById('post-category').value,
             tags: document.getElementById('post-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
         };
@@ -704,4 +716,4 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (path.startsWith('/search')) {
         handleSearchForm();
     }
-});
+})

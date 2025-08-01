@@ -60,3 +60,14 @@
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/editorjs-html@3.4.0/build/edjs-html.browser.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const postId = "{{ post_id }}";
+    loadPostDetail(postId);
+    handleCommentForm(postId);
+});
+</script>
+{% endblock %}

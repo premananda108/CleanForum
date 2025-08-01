@@ -38,19 +38,12 @@
 
                 <!-- Содержание -->
                 <div class="space-y-2">
-                    <label for="post-content" class="block text-sm font-semibold text-gray-700 flex items-center">
+                    <label class="block text-sm font-semibold text-gray-700 flex items-center">
                         <i class="fas fa-align-left mr-2 text-green-500"></i>
                         Содержание
                     </label>
-                    <textarea
-                        id="post-content"
-                        rows="12"
-                        required
-                        minlength="10"
-                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-50 focus:border-green-500 transition-all duration-200 resize-none"
-                        placeholder="Расскажите подробнее о вашей теме..."
-                    ></textarea>
-                    <div class="text-xs text-gray-500">Минимум 10 символов. Поддерживается Markdown</div>
+                    <div id="editorjs" class="prose max-w-none border border-gray-200 rounded-xl p-4"></div>
+                    <div class="text-xs text-gray-500">Используйте Markdown-подобные сокращения для форматирования.</div>
                 </div>
 
                 <!-- Категория и теги -->
@@ -147,4 +140,61 @@
         </div>
     </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const editor = new EditorJS({
+        holder: 'editorjs',
+        tools: {
+            header: {
+                class: Header,
+                inlineToolbar: ['link'],
+                config: {
+                    placeholder: 'Введите заголовок',
+                    levels: [2, 3, 4],
+                    defaultLevel: 2
+                }
+            },
+            list: {
+                class: List,
+                inlineToolbar: true
+            },
+            quote: {
+                class: Quote,
+                inlineToolbar: true,
+                shortcut: 'CMD+SHIFT+O',
+                config: {
+                    quotePlaceholder: 'Введите цитату',
+                    captionPlaceholder: 'Автор цитаты',
+                },
+            },
+            code: CodeTool
+        },
+        placeholder: 'Начните писать вашу историю...',
+    });
+
+    const form = document.getElementById('create-post-form');
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const savedData = await editor.save();
+        
+        const postData = {
+            title: document.getElementById('post-title').value,
+            content: JSON.stringify(savedData), // Отправляем JSON
+            category_id: document.getElementById('post-category').value,
+            tags: document.getElementById('post-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
+        };
+
+        handleCreatePostForm(postData);
+    });
+});
+</script>
 {% endblock %}

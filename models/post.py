@@ -53,10 +53,38 @@ class Post:
     """Класс для работы с постами"""
 
     @staticmethod
+    def _extract_text_from_editorjs(content: str) -> str:
+        """Извлекает чистый текст из JSON-структуры Editor.js."""
+        try:
+            data = json.loads(content)
+            # Собираем текст из всех блоков, где он может быть
+            text_parts = []
+            for block in data.get('blocks', []):
+                block_data = block.get('data', {})
+                text = block_data.get('text', '')
+                if text:
+                    text_parts.append(text)
+                # Дополнительно можно обрабатывать списки, заголовки и т.д.
+                items = block_data.get('items', [])
+                if items:
+                    text_parts.extend(items)
+            return " ".join(text_parts)
+        except (json.JSONDecodeError, TypeError):
+            # Если это не JSON, возвращаем как есть
+            return content
+
+    @staticmethod
     def calculate_reading_time(content: str) -> int:
         """Рассчитать время чтения (примерно 200 слов в минуту)"""
-        word_count = len(content.split())
-        return max(1, word_count // 200)
+        try:
+            data = json.loads(content)
+            text_content = " ".join([block['data']['text'] for block in data['blocks'] if block['type'] == 'paragraph'])
+            word_count = len(text_content.split())
+            return max(1, word_count // 200)
+        except (json.JSONDecodeError, KeyError):
+            # Fallback для простого текста
+            word_count = len(content.split())
+            return max(1, word_count // 200)
 
     @staticmethod
     async def create(post_data: PostCreate, author_id: str) -> Optional[str]:
@@ -67,10 +95,13 @@ class Post:
         post_id = str(uuid.uuid4())
         now = datetime.now()
 
+        # Извлекаем чистый текст для анализа
+        text_for_analysis = Post._extract_text_from_editorjs(post_data.content)
+
         # Сначала проводим анализ, чтобы получить оценку спама
         from services.vector_classifier import vector_classifier
         analysis_results = await vector_classifier.analyze_with_vectors(
-            post_id, post_data.title, post_data.content, post_data.tags, author_id
+            post_id, post_data.title, text_for_analysis, post_data.tags, author_id
         )
 
         is_spam = analysis_results.get("is_spam", False)
