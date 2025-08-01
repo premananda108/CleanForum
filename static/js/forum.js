@@ -19,6 +19,10 @@ class ForumAPI {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
+        if (response.status === 204) {
+            return null;
+        }
+
         return await response.json();
     }
 
