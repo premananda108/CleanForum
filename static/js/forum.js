@@ -531,6 +531,95 @@ function renderSimilarPosts(posts) {
     `;
 }
 
+function renderSimilarPosts(posts) {
+    const container = document.getElementById('similar-posts-container');
+    if (!container) return;
+
+    if (!posts || posts.length === 0) {
+        container.innerHTML = `
+            <div class="text-center py-6 text-gray-500">
+                <i class="fas fa-search mb-2 text-2xl"></i>
+                <p class="text-sm">Похожих постов не найдено</p>
+            </div>
+        `;
+        return;
+    }
+
+    container.innerHTML = `
+        <div class="space-y-3">
+            ${posts.map(post => `
+                <a href="/posts/${post.id}" class="block p-4 rounded-xl hover:bg-gray-50 transition-colors group">
+                    <h4 class="font-medium text-gray-800 group-hover:text-blue-600 text-sm mb-2 leading-snug">${post.title}</h4>
+                    <div class="flex items-center text-xs text-gray-500">
+                        <i class="fas fa-user mr-1"></i>
+                        <span>${post.author_username}</span>
+                    </div>
+                </a>
+            `).join('')}
+        </div>
+    `;
+}
+
+async function loadStatsForHomePage() {
+    try {
+        const stats = await api.getSystemStats();
+        const spamStatsContainer = document.getElementById('spam-stats');
+        const quickStatsContainer = document.getElementById('quick-stats'); // Новый ID для блока быстрой статистики
+
+        // Обновление блока "Защита от спама"
+        if (spamStatsContainer) {
+            spamStatsContainer.innerHTML = `
+                <div class="text-center">
+                    <i class="fas fa-shield-alt mb-2 text-3xl text-green-500"></i>
+                    <p class="text-gray-700 font-semibold text-lg">Статистика спама</p>
+                    <p class="text-gray-600 text-sm">Обнаружено: <span class="font-bold text-red-600">${stats.spam_posts}</span> постов</p>
+                    <p class="text-gray-600 text-sm">Процент спама: <span class="font-bold text-yellow-600">${stats.spam_percentage}%</span></p>
+                </div>
+            `;
+        }
+
+        // Обновление блока "Быстрая статистика"
+        if (quickStatsContainer) {
+            quickStatsContainer.innerHTML = `
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
+                        <span class="text-gray-600">Всего постов</span>
+                        <span class="font-bold text-green-700">${stats.total_posts}</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
+                        <span class="text-gray-600">Опубликованных постов</span>
+                        <span class="font-bold text-green-700">${stats.published_posts}</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
+                        <span class="text-gray-600">Всего комментариев</span>
+                        <span class="font-bold text-green-700">${stats.total_comments}</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
+                        <span class="text-gray-600">Заблокировано спама (посты)</span>
+                        <span class="font-bold text-yellow-700">${stats.spam_posts}</span>
+                    </div>
+                    <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
+                        <span class="text-gray-600">Заблокировано спама (комментарии)</span>
+                        <span class="font-bold text-yellow-700">${stats.spam_comments}</span>
+                    </div>
+                </div>
+            `;
+        }
+
+    } catch (error) {
+        console.error('Error loading home page stats:', error);
+        const errorHtml = `
+            <div class="p-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
+                Ошибка загрузки статистики.
+            </div>
+        `;
+        const spamStatsContainer = document.getElementById('spam-stats');
+        const quickStatsContainer = document.getElementById('quick-stats');
+        if (spamStatsContainer) spamStatsContainer.innerHTML = errorHtml;
+        if (quickStatsContainer) quickStatsContainer.innerHTML = errorHtml;
+    }
+}
+
 function showAlert(message, type = 'info') {
     const colors = {
         success: 'bg-green-50 border-green-200 text-green-800',
@@ -795,6 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (path === '/') {
         loadPosts();
         loadCategories();
+        loadStatsForHomePage();
     } else if (path.startsWith('/create')) {
         initCreatePostPage();
     } else if (path.startsWith('/posts/')) {
