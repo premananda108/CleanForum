@@ -363,6 +363,17 @@ class Post:
         return await db.scard("posts:spam")
 
     @staticmethod
+    async def count_published() -> int:
+        """Подсчитать количество опубликованных постов."""
+        all_post_ids = await db.zrevrange("posts:all", 0, -1)
+        published_count = 0
+        for post_id in all_post_ids:
+            post_data = await db.hgetall(f"post:{post_id}")
+            if post_data and post_data.get("status") == PostStatus.PUBLISHED.value:
+                published_count += 1
+        return published_count
+
+    @staticmethod
     async def get_similar_posts(post_id: str, limit: int = 5) -> List['PostResponse']:
         """Найти похожие посты, используя векторный поиск с фильтрацией по статусу."""
         import logging

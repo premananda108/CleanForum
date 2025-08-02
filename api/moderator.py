@@ -233,6 +233,7 @@ async def get_system_stats():
         # Статистика по постам
         total_posts = await Post.count_all()
         spam_posts = await Post.count_spam()
+        published_posts = await Post.count_published()
 
         # Статистика по комментариям
         total_comments = await Comment.count_all()
@@ -246,6 +247,7 @@ async def get_system_stats():
         return {
             # Статистика контента
             "total_posts": total_posts,
+            "published_posts": published_posts,
             "spam_posts": spam_posts,
             "total_comments": total_comments,
             "spam_comments": spam_comments,
