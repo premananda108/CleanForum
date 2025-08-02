@@ -75,10 +75,10 @@ class RedisVectorManager:
             # Сохраняем документ
             await self.redis_client.hset(doc_key, mapping={
                 "vector": vector_bytes,
-                "label": label,
-                "title": title,
-                "content": content[:500],  # Ограничиваем длину для индексации
-                "doc_id": doc_id
+                "label": label.encode('utf-8'),
+                "title": title.encode('utf-8'),
+                "content": content[:500].encode('utf-8'),  # Ограничиваем и кодируем
+                "doc_id": doc_id.encode('utf-8')
             })
 
             return True

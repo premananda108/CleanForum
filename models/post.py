@@ -421,16 +421,10 @@ class Post:
     async def search_by_text(query: str, limit: int = 20, offset: int = 0) -> List['PostResponse']:
         """Полнотекстовый поиск постов с использованием RediSearch (упрощенная версия)."""
 
-        # Экранируем спецсимволы, которые могут сломать запрос RediSearch
+        # Экранируем спецсимволы и добавляем звездочку для поиска по префиксу
+        # Новый, упрощенный синтаксис: ищем слово в ЛЮБОМ текстовом поле и фильтруем по тегу
         escaped_query = query.replace("-", "\\-")
-
-        # Создаем запрос для поиска по префиксу в заголовке ИЛИ контенте
-        # Пример: "новые видео" -> "(@title:новые видео*|@content:новые видео*)"
-        text_query = f"(@title:{escaped_query}*|@content:{escaped_query}*)"
-
-        # Ищем только среди опубликованных постов, совмещая с текстовым запросом
-        # ВАЖНО: Поле статуса в индексе называется 'label'
-        redis_query = f"(@label:{PostStatus.PUBLISHED.value}) {text_query}"
+        redis_query = f"{escaped_query}* @label:{PostStatus.PUBLISHED.value}"
 
         try:
             # Выполняем поиск, не возвращая содержимое полей для эффективности
@@ -455,7 +449,7 @@ class Post:
         # Ключи хранятся как bytes, их нужно декодировать.
         # Документы хранятся с префиксом 'post:', который нужно удалить.
         post_ids = [
-            doc_id.decode('utf-8').replace("post:", "")
+            doc_id.decode('utf-8').replace("vector:post:", "")
             for doc_id in search_results[1:] if isinstance(doc_id, bytes)
         ]
 

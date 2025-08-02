@@ -630,12 +630,24 @@ async function initCreatePostPage() {
 
         try {
             const savedData = await editor.save();
+
+            // --- ИСПРАВЛЕНИЕ НАЧАЛО ---
+            // Ищем заголовок внутри данных Editor.js
+            const headerBlock = savedData.blocks.find(block => block.type === 'header');
+            const title = headerBlock ? headerBlock.data.text : document.getElementById('post-title').value;
+
+            if (!title) {
+                showAlert('Заголовок не может быть пустым.', 'warning');
+                throw new Error("Title is required."); // Прерываем выполнение
+            }
+
             const postData = {
-                title: document.getElementById('post-title').value,
+                title: title,
                 content: JSON.stringify(savedData),
                 category_id: document.getElementById('post-category').value,
                 tags: document.getElementById('post-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
             };
+            // --- ИСПРАВЛЕНИЕ КОНЕЦ ---
 
             const newPost = await api.createPost(postData);
 
