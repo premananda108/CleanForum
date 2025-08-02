@@ -9,9 +9,6 @@ from contextlib import asynccontextmanager
 import logging
 from logging_config import setup_logging
 
-# Настраиваем логирование до создания приложения
-setup_logging()
-
 from config import settings
 from models.database import db
 from services.vector_classifier import vector_classifier
