@@ -340,57 +340,49 @@ class Post:
 
     @staticmethod
     async def get_similar_posts(post_id: str, limit: int = 5) -> List['PostResponse']:
-        """Найти похожие посты, используя векторный поиск"""
+        """Найти похожие посты, используя векторный поиск с фильтрацией по статусу."""
         import logging
         from services.redis_manager import vector_manager
 
         logging.info(f"Начинаем поиск похожих постов для post_id: {post_id}")
 
-        # 1. Получаем вектор для текущего поста
         vector_doc_id = f"post:{post_id}"
         post_vector = await vector_manager.get_vector_by_id(vector_doc_id)
-        
+
         if post_vector is None:
             logging.warning(f"Вектор для {vector_doc_id} не найден. Невозможно найти похожие посты.")
             return []
-        
+
         logging.info(f"Вектор для {vector_doc_id} успешно получен.")
 
-        # 2. Ищем похожие посты. Запрашиваем на один больше, т.к. сам пост может вернуться
+        # Ищем похожие посты, фильтруя только опубликованные (`published`)
         try:
-            similar_results = await vector_manager.search_similar(post_vector, k=limit + 1)
-            logging.info(f"Найдено {len(similar_results)} похожих результатов для {vector_doc_id}.")
-            logging.debug(f"Результаты поиска: {similar_results}")
+            # Запрашиваем на один больше, т.к. сам пост может вернуться
+            similar_results = await vector_manager.search_similar(
+                post_vector, 
+                k=limit + 1, 
+                pre_filter={"label": PostStatus.PUBLISHED.value}
+            )
+            logging.info(f"Найдено {len(similar_results)} похожих и опубликованных результатов для {vector_doc_id}.")
         except Exception as e:
             logging.error(f"Ошибка при поиске похожих векторов для {vector_doc_id}: {e}", exc_info=True)
             return []
 
-        # 3. Фильтруем и получаем посты
         similar_posts = []
         for result in similar_results:
-            # Убедимся, что doc_id это строка и удаляем префикс, если он есть
-            doc_id = result.get('doc_id', '')
-            if doc_id.startswith('post:'):
-                similar_post_id = doc_id.replace('post:', '')
-            else:
-                similar_post_id = doc_id
+            similar_post_id = result.get('doc_id', '').replace('post:', '')
 
-            # Пропускаем сам пост
-            if similar_post_id == post_id:
-                logging.info(f"Пропускаем исходный пост {post_id} из результатов.")
+            if not similar_post_id or similar_post_id == post_id:
                 continue
 
-            # Получаем данные поста
             post = await Post.get_by_id(similar_post_id)
-            if post and post.status == PostStatus.PUBLISHED:
-                logging.info(f"Добавляем похожий пост {similar_post_id} в список.")
+            if post:
                 similar_posts.append(post)
             else:
-                logging.warning(f"Похожий пост {similar_post_id} не найден или не опубликован (статус: {post.status if post else 'N/A'}).")
+                # Эта ситуация маловероятна, т.к. поиск теперь должен возвращать только существующие
+                logging.warning(f"Не удалось получить данные для похожего поста {similar_post_id}, хотя он был найден в поиске.")
 
-            # Прерываем, если набрали нужное количество
             if len(similar_posts) >= limit:
-                logging.info(f"Достигнут лимит в {limit} похожих постов.")
                 break
         
         logging.info(f"Возвращаем {len(similar_posts)} похожих постов для {post_id}.")
