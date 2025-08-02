@@ -1,6 +1,9 @@
 """
 Основное приложение FastAPI
 """
+from dotenv import load_dotenv
+load_dotenv() # Загружаем переменные окружения из .env файла
+
 from fastapi import FastAPI, Request, Response
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
