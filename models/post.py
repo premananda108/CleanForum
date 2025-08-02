@@ -424,7 +424,7 @@ class Post:
         # Экранируем спецсимволы и добавляем звездочку для поиска по префиксу
         # Новый, упрощенный синтаксис: ищем слово в ЛЮБОМ текстовом поле и фильтруем по тегу
         escaped_query = query.replace("-", "\\-")
-        redis_query = f"{escaped_query}* @label:{PostStatus.PUBLISHED.value}"
+        redis_query = f"{escaped_query}"
 
         try:
             # Выполняем поиск, не возвращая содержимое полей для эффективности
@@ -449,8 +449,8 @@ class Post:
         # Ключи хранятся как bytes, их нужно декодировать.
         # Документы хранятся с префиксом 'post:', который нужно удалить.
         post_ids = [
-            doc_id.decode('utf-8').replace("vector:post:", "")
-            for doc_id in search_results[1:] if isinstance(doc_id, bytes)
+            doc_id.replace("vector:post:", "")
+            for doc_id in search_results[1:] if isinstance(doc_id, str)
         ]
 
         # Получаем полные данные постов по найденным ID
@@ -485,7 +485,7 @@ class Post:
         # 3. Перебираем и индексируем каждый пост
         indexed_count = 0
         for post_id_bytes in all_post_ids:
-            post_id = post_id_bytes.decode('utf-8')
+            post_id = post_id_bytes
             post = await Post.get_by_id(post_id)
             
             if post and post.status == PostStatus.PUBLISHED:
