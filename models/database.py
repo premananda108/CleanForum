@@ -29,7 +29,7 @@ class RedisDatabase:
     async def disconnect(self):
         """Отключение от Redis"""
         if self.redis_client:
-            await self.redis_client.close()
+            await self.redis_client.aclose()
             logging.info("Отключен от Redis.")
 
     async def get(self, key: str) -> Optional[str]:
@@ -104,6 +104,11 @@ class RedisDatabase:
     async def srem(self, key: str, *values: str) -> int:
         """Удалить элементы из множества"""
         return await self.redis_client.srem(key, *values)
+
+    async def flush_db(self):
+        """Очистить текущую базу данных"""
+        if self.redis_client:
+            await self.redis_client.flushdb()
 
 # Глобальный экземпляр базы данных
 db = RedisDatabase()

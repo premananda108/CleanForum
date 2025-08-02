@@ -35,7 +35,9 @@ class Settings:
     MIN_USER_AGE_DAYS: int = 7  # минимальный возраст аккаунта
 
     # Секретные ключи (в продакшене использовать переменные окружения)
-    SECRET_KEY: str = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+    SECRET_KEY: str = os.getenv("SECRET_KEY")
+    if not SECRET_KEY:
+        raise ValueError("Необходимо установить переменную окружения SECRET_KEY")
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 

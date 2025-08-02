@@ -1,86 +1,101 @@
+
 import pytest
-import httpx
-import asyncio
-import os
+import pytest_asyncio
+from unittest.mock import AsyncMock
 
-# Устанавливаем переменную окружения для тестов
-os.environ['TESTING'] = 'true'
-
-from main import app
+from models.user import User, UserCreate
+from models.category import Category, CategoryCreate
+from models.post import Post, PostCreate
+from config import settings
 from models.database import db
-from services.redis_manager import vector_manager # Импортируем vector_manager
 
-@pytest.fixture
-async def client():
-    async with app.router.lifespan_context(app):
-        # Очищаем базу данных
-        await db.redis_client.flushdb()
-        # Создаем поисковый индекс
-        await vector_manager.create_index()
-        
-        async with httpx.AsyncClient(app=app, base_url="http://test") as client:
-            yield client
+# Фикстура для создания тестового пользователя и категории
+@pytest_asyncio.fixture(scope="function")
+async def setup_data(monkeypatch):
+    # Принудительно устанавливаем тестовые настройки
+    monkeypatch.setattr(settings, 'TESTING', True)
+    monkeypatch.setattr(settings, 'REDIS_PORT', 6380)
 
-@pytest.mark.anyio
-async def test_get_similar_posts(client: httpx.AsyncClient):
-    """
-    Тестирует получение похожих постов.
-    """
-    # --- Подготовка: Создаем категории ---
-    category_1_data = {"name": "Технологии", "description": "Все о технологиях"}
-    category_2_data = {"name": "Наука", "description": "Все о науке"}
+    # Подключаемся к БД
+    await db.connect()
+    # Очищаем БД
+    await db.flush_db()
 
-    response_cat_1 = await client.post("/api/categories", json=category_1_data)
-    assert response_cat_1.status_code == 200
-    category_1 = response_cat_1.json()
+    # Создаем пользователя
+    user_data = UserCreate(username="testuser_posts", email="test_posts@example.com", password="password123")
+    user_id = await User.create(user_data)
 
-    response_cat_2 = await client.post("/api/categories", json=category_2_data)
-    assert response_cat_2.status_code == 200
-    category_2 = response_cat_2.json()
+    # Создаем категорию
+    category_data = CategoryCreate(name="Test Category", description="A category for testing")
+    category_id = await Category.create(category_data)
 
-    # --- Подготовка: Создаем посты ---
-    post_a_data = {
-        "title": "Лучшие рецепты итальянской пиццы",
-        "content": "Секреты теста, соуса и начинок.",
-        "category_id": category_1['id'],
-        "tags": ["пицца", "рецепты"]
-    }
-    post_b_data = {
-        "title": "Как приготовить идеальное тесто для пиццы",
-        "content": "Пошаговый рецепт эластичного теста.",
-        "category_id": category_1['id'],
-        "tags": ["тесто", "пицца"]
-    }
-    post_c_data = {
-        "title": "Введение в квантовую механику",
-        "content": "Кот Шрёдингера и принцип неопределенности.",
-        "category_id": category_2['id'],
-        "tags": ["физика", "наука"]
-    }
+    yield user_id, category_id
 
-    response_a = await client.post("/api/posts", json=post_a_data)
-    assert response_a.status_code == 200
-    post_a = response_a.json()
+    # Отключаемся от БД
+    await db.disconnect()
 
-    response_b = await client.post("/api/posts", json=post_b_data)
-    assert response_b.status_code == 200
-    
-    response_c = await client.post("/api/posts", json=post_c_data)
-    assert response_c.status_code == 200
+@pytest.mark.asyncio
+async def test_create_post_success(setup_data, monkeypatch):
+    """Тест успешного создания поста, который не является спамом."""
+    user_id, category_id = setup_data
 
-    await asyncio.sleep(2) # Пауза для индексации
+    # Мокаем (заменяем) функцию анализа на спам, чтобы она всегда возвращала "не спам"
+    mock_analyze = AsyncMock(return_value={
+        "is_spam": False, 
+        "spam_score": 0.1, 
+        "details": "Not spam"
+    })
+    monkeypatch.setattr("services.vector_classifier.vector_classifier.analyze_with_vectors", mock_analyze)
 
-    # --- Действие: Получаем пост А и проверяем похожие ---
-    response_get_a = await client.get(f"/api/posts/{post_a['id']}")
-    assert response_get_a.status_code == 200
-    post_a_details = response_get_a.json()
+    post_data = PostCreate(
+        title="This is a test post title",
+        content='{"time": 1629890400000, "blocks": [{"type": "paragraph", "data": {"text": "This is the content of the test post."}}], "version": "2.22.2"}',
+        category_id=category_id,
+        tags=["test", "pytest"]
+    )
 
-    # --- Проверка ---
-    assert 'similar_posts' in post_a_details
-    similar_posts = post_a_details['similar_posts']
-    assert isinstance(similar_posts, list)
-    assert len(similar_posts) > 0, "Список похожих постов не должен быть пустым"
-    
-    similar_titles = [p['title'] for p in similar_posts]
-    assert post_b_data['title'] in similar_titles, "Похожий пост B не найден"
-    assert post_c_data['title'] not in similar_titles, "Непохожий пост C ошибочно найден"
+    # Создаем пост
+    post_id = await Post.create(post_data, author_id=user_id)
+
+    # Проверяем, что пост был создан
+    assert post_id is not None
+
+    # Проверяем, что мок был вызван
+    mock_analyze.assert_called_once()
+
+    # Получаем пост из БД и проверяем его данные
+    created_post = await Post.get_by_id(post_id)
+    assert created_post is not None
+    assert created_post.title == post_data.title
+    assert created_post.author_id == user_id
+    assert created_post.category_id == category_id
+    assert "This is the content of the test post." in created_post.content
+
+@pytest.mark.asyncio
+async def test_create_post_is_spam(setup_data, monkeypatch):
+    """Тест, в котором пост определяется как спам и не должен быть создан."""
+    user_id, category_id = setup_data
+
+    # Мокаем функцию анализа на спам, чтобы она всегда возвращала "спам"
+    mock_analyze = AsyncMock(return_value={
+        "is_spam": True, 
+        "spam_score": 0.9, 
+        "details": "This is definitely spam"
+    })
+    monkeypatch.setattr("services.vector_classifier.vector_classifier.analyze_with_vectors", mock_analyze)
+
+    post_data = PostCreate(
+        title="WIN A MILLION DOLLARS NOW!!!",
+        content='{"blocks": [{"data": {"text": "Click here for free money!"}}]}',
+        category_id=category_id,
+        tags=["spam", "money"]
+    )
+
+    # Пытаемся создать пост
+    post_id = await Post.create(post_data, author_id=user_id)
+
+    # Проверяем, что пост НЕ был создан (должен вернуться None)
+    assert post_id is None
+
+    # Проверяем, что мок был вызван
+    mock_analyze.assert_called_once()

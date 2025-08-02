@@ -27,7 +27,7 @@ class PostUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=5, max_length=200)
     content: Optional[str] = Field(None, min_length=10)
     category_id: Optional[str] = None
-    tags: Optional[List[str]] = Field(None, max_items=10)
+    tags: Optional[List[str]] = Field(None, max_length=10)
 
 class PostResponse(BaseModel):
     id: str
