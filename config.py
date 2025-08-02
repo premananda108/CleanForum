@@ -3,6 +3,11 @@
 """
 import os
 from typing import Optional
+from dotenv import load_dotenv
+
+# Загружаем переменные окружения из .env файла
+# Это должно быть в самом верху, до первого обращения к os.getenv
+load_dotenv()
 
 class Settings:
     # Основные настройки

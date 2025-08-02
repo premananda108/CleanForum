@@ -21,7 +21,7 @@ class PostCreate(BaseModel):
     title: str = Field(..., min_length=5, max_length=200)
     content: str = Field(..., min_length=10)
     category_id: str
-    tags: List[str] = Field(default_factory=list, max_items=10)
+    tags: List[str] = Field(default_factory=list, max_length=10)
 
 class PostUpdate(BaseModel):
     title: Optional[str] = Field(None, min_length=5, max_length=200)
