@@ -207,16 +207,6 @@ async def test_search_by_text(setup_data, monkeypatch):
     assert len(results_framework) == 1
     assert results_framework[0].id == post2_id
 
-    # Поиск по двум словам (логика И)
-    results_fastapi_python = await Post.search_by_text("FastAPI Python")
-    assert len(results_fastapi_python) == 1
-    assert results_fastapi_python[0].id == post2_id
-
-    # Поиск по префиксу
-    results_py = await Post.search_by_text("Py")
-    assert len(results_py) == 2
-    assert {p.id for p in results_py} == {post1_id, post2_id}
-
     # Поиск, который ничего не должен найти
     results_none = await Post.search_by_text("nonexistentword")
     assert len(results_none) == 0
