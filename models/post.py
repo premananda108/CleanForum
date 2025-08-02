@@ -138,6 +138,30 @@ class Post:
             pipe.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
             await pipe.execute()
 
+        # --- Начало нового кода ---
+        # После успешного сохранения, добавляем пост в поисковый индекс
+        try:
+            from services.redis_manager import vector_manager
+            # Убедимся, что классификатор инициализирован для создания вектора
+            if not vector_classifier.is_initialized:
+                await vector_classifier.initialize()
+            
+            post_vector = vector_classifier.create_vector(post_data.title, text_for_analysis, post_data.tags)
+            
+            await vector_manager.add_vector(
+                doc_id=f"post:{post_id}",
+                vector=post_vector,
+                label=status.value,
+                title=post_data.title,
+                content=text_for_analysis
+            )
+            import logging
+            logging.info(f"Пост {post_id} успешно добавлен в поисковый индекс.")
+        except Exception as e:
+            import logging
+            logging.error(f"Не удалось добавить пост {post_id} в поисковый индекс: {e}", exc_info=True)
+        # --- Конец нового кода ---
+
         return post_id
 
     @staticmethod
@@ -395,57 +419,103 @@ class Post:
 
     @staticmethod
     async def search_by_text(query: str, limit: int = 20, offset: int = 0) -> List['PostResponse']:
-        """Полнотекстовый поиск постов с использованием RediSearch."""
+        """Полнотекстовый поиск постов с использованием RediSearch (упрощенная версия)."""
 
         # Экранируем спецсимволы, которые могут сломать запрос RediSearch
-        terms = query.replace("-", "\\-").split()
+        escaped_query = query.replace("-", "\\-")
 
-        # Для каждого слова создаем отдельный блок запроса для поиска в обоих полях
-        # например, (@title:word*|@content:word*)
-        sub_queries = []
-        for term in terms:
-            if term: # Пропускаем пустые строки, если есть двойные пробелы
-                sub_queries.append(f"(@title:{term}*|@content:{term}*)")
+        # Создаем запрос для поиска по префиксу в заголовке ИЛИ контенте
+        # Пример: "новые видео" -> "(@title:новые видео*|@content:новые видео*)"
+        text_query = f"(@title:{escaped_query}*|@content:{escaped_query}*)"
 
-        # Объединяем подзапросы через ИЛИ
-        if not sub_queries:
-            return []
-        redis_query = "|".join(sub_queries)
+        # Ищем только среди опубликованных постов, совмещая с текстовым запросом
+        # ВАЖНО: Поле статуса в индексе называется 'label'
+        redis_query = f"(@label:{PostStatus.PUBLISHED.value}) {text_query}"
 
         try:
-            # Выполняем поиск, возвращая только doc_id
+            # Выполняем поиск, не возвращая содержимое полей для эффективности
             search_results = await db.redis_client.execute_command(
                 "FT.SEARCH",
                 settings.VECTOR_INDEX_NAME,
                 redis_query,
                 "LIMIT", offset, limit,
-                "RETURN", "1", "doc_id"
+                "NOCONTENT"
             )
         except Exception as e:
             # В случае ошибки (например, индекс не создан) возвращаем пустой список
             import logging
-            logging.error(f"Ошибка полнотекстового поиска: {e}")
+            logging.error(f"Ошибка полнотекстового поиска: {e}", exc_info=True)
             return []
 
-        # Результат: [количество_результатов, doc_id_1, ['doc_id', 'vector:uuid'], ...]
+        # Результат: [количество_результатов, doc_id_1, doc_id_2, ...]
         if not search_results or search_results[0] == 0:
             return []
 
-        # Извлекаем ID постов из результата
+        # Извлекаем ID постов из результата. Пропускаем первый элемент (количество).
+        # Ключи хранятся как bytes, их нужно декодировать.
+        # Документы хранятся с префиксом 'post:', который нужно удалить.
         post_ids = [
-            result[1].replace("vector:", "")
-            for result in search_results[1:]
+            doc_id.decode('utf-8').replace("post:", "")
+            for doc_id in search_results[1:] if isinstance(doc_id, bytes)
         ]
 
         # Получаем полные данные постов по найденным ID
         posts = []
         for post_id in post_ids:
             post = await Post.get_by_id(post_id)
-            # Добавляем только опубликованные посты
+            # Дополнительная проверка на случай рассинхронизации индекса и основной БД
             if post and post.status == PostStatus.PUBLISHED:
                 posts.append(post)
 
         return posts
+
+    @staticmethod
+    async def recreate_search_index():
+        """
+        Пересоздает поисковый индекс и заново индексирует все опубликованные посты.
+        """
+        import logging
+        from services.redis_manager import vector_manager
+        from services.vector_classifier import vector_classifier
+
+        logging.info("Начало пересоздания поискового индекса...")
+
+        # 1. Создаем индекс (метод create_index сам проверяет существование)
+        await vector_manager.create_index()
+        logging.info("Схема индекса успешно создана/проверена.")
+
+        # 2. Получаем все опубликованные посты
+        all_post_ids = await db.zrevrange("posts:all", 0, -1)
+        logging.info(f"Найдено {len(all_post_ids)} постов для возможной переиндексации.")
+
+        # 3. Перебираем и индексируем каждый пост
+        indexed_count = 0
+        for post_id_bytes in all_post_ids:
+            post_id = post_id_bytes.decode('utf-8')
+            post = await Post.get_by_id(post_id)
+            
+            if post and post.status == PostStatus.PUBLISHED:
+                try:
+                    # Убедимся, что классификатор инициализирован
+                    if not vector_classifier.is_initialized:
+                        await vector_classifier.initialize()
+
+                    post_vector = vector_classifier.create_vector(post.title, post.content, post.tags)
+                    
+                    # Добавляем в индекс
+                    vector_doc_id = f"post:{post.id}"
+                    await vector_manager.add_vector(
+                        doc_id=vector_doc_id,
+                        vector=post_vector,
+                        label=post.status.value,
+                        title=post.title,
+                        content=post.content
+                    )
+                    indexed_count += 1
+                except Exception as e:
+                    logging.error(f"Ошибка при переиндексации поста {post.id}: {e}")
+
+        logging.info(f"Переиндексация завершена. Успешно проиндексировано {indexed_count} постов.")
 
 
 # Это нужно для обновления ссылок в Pydantic моделях после определения всех классов
