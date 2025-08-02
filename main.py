@@ -24,7 +24,8 @@ from api import posts, comments, categories, moderator, search, users
 async def lifespan(app: FastAPI):
     """Управление жизненным циклом приложения"""
     # Запуск
-    # Запуск
+    # Настраиваем логирование
+    setup_logging()
     logging.info(f"Запуск {settings.APP_NAME} v{settings.APP_VERSION}")
 
     # Подключаемся к Redis
