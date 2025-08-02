@@ -1,13 +1,16 @@
 
 import pytest
 import pytest_asyncio
-from unittest.mock import AsyncMock
+import numpy as np
+from unittest.mock import AsyncMock, MagicMock
 
 from models.user import User, UserCreate
 from models.category import Category, CategoryCreate
-from models.post import Post, PostCreate
+from models.post import Post, PostCreate, PostUpdate, PostStatus
 from config import settings
 from models.database import db
+from services.redis_manager import vector_manager
+from services.vector_classifier import vector_classifier
 
 # Фикстура для создания тестового пользователя и категории
 @pytest_asyncio.fixture(scope="function")
@@ -16,10 +19,18 @@ async def setup_data(monkeypatch):
     monkeypatch.setattr(settings, 'TESTING', True)
     monkeypatch.setattr(settings, 'REDIS_PORT', 6380)
 
-    # Подключаемся к БД
+    # Подключаемся к основной БД и к менеджеру векторов
     await db.connect()
-    # Очищаем БД
+    await vector_manager.connect()
+    
+    # Очищаем основную БД и удаляем/создаем индекс
     await db.flush_db()
+    try:
+        await vector_manager.redis_client.execute_command("FT.DROPINDEX", settings.VECTOR_INDEX_NAME, "DD")
+    except Exception as e:
+        if "no such index" not in str(e).lower():
+            raise e
+    await vector_manager.create_index()
 
     # Создаем пользователя
     user_data = UserCreate(username="testuser_posts", email="test_posts@example.com", password="password123")
@@ -32,6 +43,7 @@ async def setup_data(monkeypatch):
     yield user_id, category_id
 
     # Отключаемся от БД
+    await vector_manager.disconnect()
     await db.disconnect()
 
 @pytest.mark.asyncio
@@ -99,3 +111,40 @@ async def test_create_post_is_spam(setup_data, monkeypatch):
 
     # Проверяем, что мок был вызван
     mock_analyze.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_update_post(setup_data, monkeypatch):
+    """Тест успешного обновления поста."""
+    user_id, category_id = setup_data
+
+    # Мокаем анализ спама для создания и обновления
+    mock_analyze = AsyncMock(return_value={"is_spam": False, "spam_score": 0.1})
+    monkeypatch.setattr("services.vector_classifier.vector_classifier.analyze_with_vectors", mock_analyze)
+
+    # 1. Создаем пост для обновления
+    initial_post_data = PostCreate(
+        title="Original Title",
+        content='{"blocks": [{"data": {"text": "Original content."}}]}',
+        category_id=category_id,
+        tags=["original"]
+    )
+    post_id = await Post.create(initial_post_data, author_id=user_id)
+    assert post_id is not None
+
+    # 2. Обновляем пост
+    update_data = PostUpdate(
+        title="Updated Title",
+        content='{"blocks": [{"data": {"text": "Updated content."}}]}'
+    )
+    success = await Post.update(post_id, update_data)
+    assert success is True
+
+    # 3. Проверяем, что данные обновились
+    updated_post = await Post.get_by_id(post_id)
+    assert updated_post is not None
+    assert updated_post.title == "Updated Title"
+    assert "Updated content." in updated_post.content
+    # Проверяем, что updated_at изменилось (с небольшой погрешностью)
+    from datetime import datetime, timedelta
+    assert updated_post.updated_at > updated_post.created_at
+    assert updated_post.updated_at > (datetime.now() - timedelta(seconds=5))

@@ -35,7 +35,7 @@ class RedisVectorManager:
     async def disconnect(self):
         """Отключение от Redis"""
         if self.redis_client:
-            await self.redis_client.close()
+            await self.redis_client.aclose()
 
     async def create_index(self):
         """Создать индекс для векторного поиска"""
