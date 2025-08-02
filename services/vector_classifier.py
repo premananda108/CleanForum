@@ -11,6 +11,7 @@ from config import settings
 from services.redis_manager import vector_manager
 from services.spam_detector import spam_detector
 from models.database import db
+from models.post import PostStatus
 
 try:
     from sentence_transformers import SentenceTransformer
@@ -58,7 +59,7 @@ class VectorSpamClassifier:
         vector = self.model.encode(combined_text)
         return vector.astype(np.float32)
 
-    async def analyze_with_vectors(self, post_id: str, title: str, content: str, 
+    async def analyze_with_vectors(self, post_id: str, title: str, content: str,
                                   tags: List[str], author_id: str) -> Dict[str, Any]:
         """Анализ поста с использованием векторного поиска"""
 
@@ -78,7 +79,7 @@ class VectorSpamClassifier:
         final_result = self._combine_results(heuristic_result, vector_result)
 
         # 6. Сохраняем вектор поста в базу (для обучения будущих классификаций)
-        label = "spam" if final_result["is_spam"] else "legitimate"
+        label = PostStatus.SPAM.value if final_result["is_spam"] else PostStatus.PUBLISHED.value
         vector_doc_id = f"post:{post_id}"
         await vector_manager.add_vector(vector_doc_id, post_vector, label, "post", f"{title} - {content[:500]}")
 
@@ -121,7 +122,7 @@ class VectorSpamClassifier:
             "similar_posts_count": total_votes,
             "spam_neighbors": spam_votes,
             "legitimate_neighbors": legitimate_votes,
-            "neighbor_scores": [(post.get("score", 0), post.get("label", "unknown")) 
+            "neighbor_scores": [(post.get("score", 0), post.get("label", "unknown"))
                                for post in similar_posts[:5]]  # Показываем топ-5
         }
 
@@ -202,7 +203,7 @@ class VectorSpamClassifier:
         final_result = self._combine_results(heuristic_result, vector_result)
 
         # 6. Сохраняем вектор
-        label = "spam" if final_result["is_spam"] else "legitimate"
+        label = PostStatus.SPAM.value if final_result["is_spam"] else "legitimate"
         # Используем префикс, чтобы отличать векторы комментариев
         vector_doc_id = f"comment:{comment_id}"
         await vector_manager.add_vector(vector_doc_id, comment_vector, label, "comment", content[:500])
@@ -226,7 +227,7 @@ class VectorSpamClassifier:
 
         # Обновляем метку в векторной базе
         vector_doc_id = f"{entity_type}:{entity_id}"
-        new_label = "spam" if is_spam else "legitimate"
+        new_label = PostStatus.SPAM.value if is_spam else PostStatus.PUBLISHED.value
         
         # Немедленно обновляем метку в Redis
         success = await vector_manager.update_vector_label(vector_doc_id, new_label)

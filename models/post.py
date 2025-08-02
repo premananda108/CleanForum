@@ -370,16 +370,20 @@ class Post:
 
         similar_posts = []
         for result in similar_results:
+            # Пропускаем сам пост
             similar_post_id = result.get('doc_id', '').replace('post:', '')
-
             if not similar_post_id or similar_post_id == post_id:
+                continue
+
+            # Проверяем порог схожести
+            score = result.get('score', 1.0)
+            if score > settings.SIMILARITY_THRESHOLD:
                 continue
 
             post = await Post.get_by_id(similar_post_id)
             if post:
                 similar_posts.append(post)
             else:
-                # Эта ситуация маловероятна, т.к. поиск теперь должен возвращать только существующие
                 logging.warning(f"Не удалось получить данные для похожего поста {similar_post_id}, хотя он был найден в поиске.")
 
             if len(similar_posts) >= limit:
