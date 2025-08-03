@@ -118,7 +118,8 @@ async def update_post(
     if post_data.content is not None or post_data.title is not None or post_data.tags is not None:
         updated_post = await Post.get_by_id(post_id, increment_views=False)
         if updated_post:
-            text_for_analysis = Post._extract_text_from_editorjs(updated_post.content_json or '')
+            # Теперь content это всегда Markdown
+            text_for_analysis = updated_post.content
             
             analysis_results = await vector_classifier.analyze_with_vectors(
                 post_id, 

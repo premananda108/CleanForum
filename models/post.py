@@ -32,8 +32,7 @@ class PostUpdate(BaseModel):
 class PostResponse(BaseModel):
     id: str
     title: str
-    content: str  # Это будет чистый текст для превью и SEO
-    content_json: Optional[str] = None  # Это будет исходный JSON от EditorJS для рендеринга
+    content: str  # Теперь это Markdown контент
     category_id: str
     category_name: str = ""
     author_id: str
@@ -54,27 +53,6 @@ class Post:
     """Класс для работы с постами"""
 
     @staticmethod
-    def _extract_text_from_editorjs(content: str) -> str:
-        """Извлекает чистый текст из JSON-структуры Editor.js."""
-        try:
-            data = json.loads(content)
-            # Собираем текст из всех блоков, где он может быть
-            text_parts = []
-            for block in data.get('blocks', []):
-                block_data = block.get('data', {})
-                text = block_data.get('text', '')
-                if text:
-                    text_parts.append(text)
-                # Дополнительно можно обрабатывать списки, заголовки и т.д.
-                items = block_data.get('items', [])
-                if items:
-                    text_parts.extend(items)
-            return " ".join(text_parts)
-        except (json.JSONDecodeError, TypeError):
-            # Если это не JSON, возвращаем как есть
-            return content
-
-    @staticmethod
     def calculate_reading_time(text_content: str) -> int:
         """Рассчитать время чтения (примерно 200 слов в минуту) на основе чистого текста."""
         word_count = len(text_content.split())
@@ -89,8 +67,8 @@ class Post:
         post_id = str(uuid.uuid4())
         now = datetime.now()
 
-        # Извлекаем чистый текст для анализа, поиска и вычисления времени чтения
-        text_for_analysis = Post._extract_text_from_editorjs(post_data.content)
+        # Теперь post_data.content это и есть Markdown текст
+        text_for_analysis = post_data.content
 
         # Проводим анализ на спам
         from services.vector_classifier import vector_classifier
@@ -113,8 +91,7 @@ class Post:
         post_info = {
             "id": post_id,
             "title": post_data.title,
-            "content": text_for_analysis,  # Чистый текст для поиска и превью
-            "content_json": post_data.content,  # Исходный JSON для рендеринга
+            "content": text_for_analysis,  # Markdown контент
             "category_id": post_data.category_id,
             "author_id": author_id,
             "tags": json.dumps(post_data.tags),
@@ -188,7 +165,6 @@ class Post:
             id=post_data["id"],
             title=post_data["title"],
             content=post_data["content"],
-            content_json=post_data.get("content_json"),
             category_id=post_data["category_id"],
             category_name=category.name if category else "Unknown",
             author_id=post_data["author_id"],
@@ -258,10 +234,8 @@ class Post:
             update_fields["title"] = post_data.title
             reanalyze_spam = True
         if post_data.content is not None:
-            text_content = Post._extract_text_from_editorjs(post_data.content)
-            update_fields["content"] = text_content
-            update_fields["content_json"] = post_data.content
-            update_fields["reading_time"] = Post.calculate_reading_time(text_content)
+            update_fields["content"] = post_data.content
+            update_fields["reading_time"] = Post.calculate_reading_time(post_data.content)
             reanalyze_spam = True
         if post_data.category_id is not None:
             update_fields["category_id"] = post_data.category_id
