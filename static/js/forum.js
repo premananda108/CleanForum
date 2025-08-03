@@ -882,5 +882,4 @@ async function initEditPostPage(postId) {
                 submitBtn.disabled = false;
             }
         });
-    }
 }
