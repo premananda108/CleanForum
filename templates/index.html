@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    <!-- Основной контент -->
+    <div class="lg:col-span-2 space-y-6">
+        <!-- Hero секция -->
+        <div class="bg-gradient-to-r from-green-600 to-yellow-500 rounded-2xl p-8 text-white shadow-xl">
+            <h1 class="text-4xl font-bold mb-4 flex items-center">
+                <i class="fas fa-comments mr-4 text-yellow-300"></i>
+                Добро пожаловать в CleanForum
+            </h1>
+            <p class="text-xl opacity-90 mb-6">Современный форум с AI-защитой от спама и векторным поиском</p>
+            <div class="flex flex-wrap gap-4">
+                <div class="flex items-center bg-white/20 rounded-lg px-4 py-2 backdrop-blur-sm">
+                    <i class="fas fa-shield-alt mr-2 text-green-300"></i>
+                    <span class="text-sm font-medium">AI Spam Detection</span>
+                </div>
+                <div class="flex items-center bg-white/20 rounded-lg px-4 py-2 backdrop-blur-sm">
+                    <i class="fas fa-search mr-2 text-yellow-300"></i>
+                    <span class="text-sm font-medium">Vector Search</span>
+                </div>
+                <div class="flex items-center bg-white/20 rounded-lg px-4 py-2 backdrop-blur-sm">
+                    <i class="fas fa-bolt mr-2 text-yellow-300"></i>
+                    <span class="text-sm font-medium">Real-time</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Посты -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <div class="flex items-center justify-between mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center">
+                    <i class="fas fa-fire mr-3 text-yellow-500"></i>
+                    Последние посты
+                </h2>
+                <a href="/create" class="bg-gradient-to-r from-green-500 to-yellow-500 text-white px-6 py-2 rounded-xl hover:shadow-lg transition-all duration-300 font-medium">
+                    <i class="fas fa-plus mr-2"></i>Создать пост
+                </a>
+            </div>
+            <div id="posts-container" class="space-y-4">
+                <!-- Посты будут загружены через JavaScript -->
+                <div class="animate-pulse space-y-4">
+                    <div class="bg-gray-100 h-32 rounded-xl"></div>
+                    <div class="bg-gray-100 h-32 rounded-xl"></div>
+                    <div class="bg-gray-100 h-32 rounded-xl"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Боковая панель -->
+    <div class="space-y-6">
+        <!-- Категории -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-tags mr-3 text-green-600"></i>
+                Категории
+            </h3>
+            <div id="categories-list" class="space-y-2">
+                <!-- Категории будут загружены через JavaScript -->
+                <div class="animate-pulse space-y-2">
+                    <div class="bg-gray-100 h-8 rounded-lg"></div>
+                    <div class="bg-gray-100 h-8 rounded-lg"></div>
+                    <div class="bg-gray-100 h-8 rounded-lg"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Защита от спама -->
+        <div class="bg-gradient-to-br from-green-50 to-yellow-50 rounded-2xl shadow-lg p-6 border border-green-100">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <div class="w-8 h-8 bg-gradient-to-r from-green-500 to-yellow-500 rounded-lg flex items-center justify-center mr-3">
+                    <i class="fas fa-shield-alt text-white text-sm"></i>
+                </div>
+                Защита от спама
+            </h3>
+            <p class="text-gray-600 mb-4">Наш форум использует передовые технологии защиты от спама:</p>
+            <div class="space-y-3">
+                <div class="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-brain text-green-600 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-800 text-sm">Векторный анализ</div>
+                        <div class="text-xs text-gray-500">SentenceTransformer</div>
+                    </div>
+                </div>
+                <div class="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-cogs text-yellow-600 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-800 text-sm">Эвристические алгоритмы</div>
+                        <div class="text-xs text-gray-500">Pattern Recognition</div>
+                    </div>
+                </div>
+                <div class="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                    <div class="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-graduation-cap text-green-600 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-800 text-sm">Обучение на обратной связи</div>
+                        <div class="text-xs text-gray-500">Machine Learning</div>
+                    </div>
+                </div>
+                <div class="flex items-center p-3 bg-white rounded-lg shadow-sm">
+                    <div class="w-8 h-8 bg-yellow-100 rounded-lg flex items-center justify-center mr-3">
+                        <i class="fas fa-database text-yellow-600 text-sm"></i>
+                    </div>
+                    <div>
+                        <div class="font-semibold text-gray-800 text-sm">Redis Vector Search</div>
+                        <div class="text-xs text-gray-500">High Performance</div>
+                    </div>
+                </div>
+            </div>
+            <div id="spam-stats" class="mt-4 p-4 bg-white rounded-lg shadow-sm">
+                <div class="text-center text-gray-500">
+                    <i class="fas fa-spinner fa-spin mb-2 text-2xl text-green-500"></i>
+                    <div class="text-sm">Загрузка статистики...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Быстрая статистика -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+            <h3 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                <i class="fas fa-chart-line mr-3 text-green-600"></i>
+                Статистика
+            </h3>
+            <div id="quick-stats" class="space-y-3">
+                <div class="text-center text-gray-500">
+                    <i class="fas fa-spinner fa-spin mb-2 text-2xl text-green-500"></i>
+                    <div class="text-sm">Загрузка статистики...</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+
+{% block title %}Создать новый пост - CleanForum{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <!-- Hero секция -->
+    <div class="text-center mb-8">
+        <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl mb-4">
+            <i class="fas fa-edit text-white text-2xl"></i>
+        </div>
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">Создать новый пост</h1>
+        <p class="text-xl text-gray-600">Поделитесь своими мыслями с сообществом</p>
+    </div>
+
+    <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <!-- Прогресс бар -->
+        <div class="bg-gradient-to-r from-blue-500 to-purple-600 h-1"></div>
+
+        <div class="p-8">
+            <form id="create-post-form" class="space-y-6">
+                <!-- Заголовок -->
+                <div class="space-y-2">
+                    <label for="post-title" class="block text-sm font-semibold text-gray-700 flex items-center">
+                        <i class="fas fa-heading mr-2 text-blue-500"></i>
+                        Заголовок поста
+                    </label>
+                    <input
+                        type="text"
+                        id="post-title"
+                        required
+                        minlength="5"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-blue-50 focus:border-blue-500 transition-all duration-200 text-lg"
+                        placeholder="Введите заголовок..."
+                    >
+                    <div class="text-xs text-gray-500">Минимум 5 символов</div>
+                </div>
+
+                <!-- Содержание -->
+                <div class="space-y-2">
+                    <label class="block text-sm font-semibold text-gray-700 flex items-center">
+                        <i class="fas fa-align-left mr-2 text-green-500"></i>
+                        Содержание
+                    </label>
+                    <div id="editorjs" class="prose max-w-none border border-gray-200 rounded-xl p-4"></div>
+                    <div class="text-xs text-gray-500">Используйте Markdown-подобные сокращения для форматирования.</div>
+                </div>
+
+                <!-- Категория и теги -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label for="post-category" class="block text-sm font-semibold text-gray-700 flex items-center">
+                            <i class="fas fa-folder mr-2 text-purple-500"></i>
+                            Категория
+                        </label>
+                        <select
+                            id="post-category"
+                            required
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-50 focus:border-purple-500 transition-all duration-200"
+                        >
+                            <option value="">Выберите категорию</option>
+                            <!-- Категории будут загружены сюда -->
+                        </select>
+                    </div>
+
+                    <div class="space-y-2">
+                        <label for="post-tags" class="block text-sm font-semibold text-gray-700 flex items-center">
+                            <i class="fas fa-tags mr-2 text-orange-500"></i>
+                            Теги
+                        </label>
+                        <input
+                            type="text"
+                            id="post-tags"
+                            class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-50 focus:border-orange-500 transition-all duration-200"
+                            placeholder="javascript, веб-разработка, api"
+                        >
+                        <div class="text-xs text-gray-500">Через запятую</div>
+                    </div>
+                </div>
+
+                <!-- AI Предупреждение -->
+                <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+                    <div class="flex items-start space-x-3">
+                        <div class="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i class="fas fa-robot text-blue-600 text-sm"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-semibold text-blue-800 text-sm mb-1">AI Модерация</h4>
+                            <p class="text-blue-700 text-sm">
+                                Ваш пост будет автоматически проверен на спам с помощью векторного анализа и эвристических алгоритмов.
+                                Качественный контент публикуется мгновенно!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Кнопка отправки -->
+                <div class="flex items-center justify-between">
+                    <a href="/" class="text-gray-500 hover:text-gray-700 transition-colors flex items-center">
+                        <i class="fas fa-arrow-left mr-2"></i>
+                        Вернуться назад
+                    </a>
+
+                    <button
+                        type="submit"
+                        class="bg-gradient-to-r from-blue-500 to-purple-600 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300 flex items-center"
+                    >
+                        <i class="fas fa-paper-plane mr-2"></i>
+                        Опубликовать пост
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Подсказки -->
+    <div class="mt-8 grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-center mb-2">
+                <i class="fas fa-lightbulb text-yellow-500 mr-2"></i>
+                <h4 class="font-semibold text-gray-800 text-sm">Качественный контент</h4>
+            </div>
+            <p class="text-gray-600 text-xs">Подробно раскрывайте тему, используйте примеры и структурируйте текст</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-center mb-2">
+                <i class="fas fa-search text-blue-500 mr-2"></i>
+                <h4 class="font-semibold text-gray-800 text-sm">SEO оптимизация</h4>
+            </div>
+            <p class="text-gray-600 text-xs">Используйте ключевые слова в заголовке и тегах для лучшего поиска</p>
+        </div>
+
+        <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+            <div class="flex items-center mb-2">
+                <i class="fas fa-users text-green-500 mr-2"></i>
+                <h4 class="font-semibold text-gray-800 text-sm">Сообщество</h4>
+            </div>
+            <p class="text-gray-600 text-xs">Отвечайте на комментарии и участвуйте в обсуждениях</p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest"></script>
+{% endblock %}

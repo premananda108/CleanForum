@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block title %}Поиск по форуму - CleanForum{% endblock %}
+
+{% block content %}
+<div class="bg-white rounded-xl shadow-md">
+    <div class="p-8">
+        <h1 class="text-3xl font-bold text-gray-800 mb-2"><i class="fas fa-search text-primary-500"></i> Поиск по статьям</h1>
+        <p class="text-gray-600 mb-6">Используйте форму ниже для поиска по заголовкам и содержимому постов.</p>
+
+        <form id="search-form" class="mb-8">
+            <div class="relative flex items-stretch w-full">
+                <input type="text" id="search-query" class="w-full px-4 py-3 text-lg text-gray-700 bg-gray-50 border border-gray-300 rounded-l-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition" placeholder="Введите ваш запрос..." required minlength="2">
+                <button type="submit" class="inline-flex items-center px-8 py-3 border border-transparent text-lg font-medium rounded-r-lg shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300">
+                    <i class="fas fa-search mr-2"></i>Найти
+                </button>
+            </div>
+        </form>
+
+        <div class="border-t border-gray-200 pt-6">
+            <div id="search-results-container" class="space-y-6">
+                <!-- Результаты поиска будут отображены здесь -->
+                <p class="text-gray-500">Введите запрос для начала поиска.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+    {{ super() }}
+    <script>
+        // Мы добавим логику в forum.js на следующем шаге.
+        // Этот блок гарантирует, что наш DOMContentLoaded listener в forum.js сработает.
+    </script>
+{% endblock %}
