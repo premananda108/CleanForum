@@ -199,7 +199,12 @@ async function loadPosts(categoryId = null) {
             return;
         }
 
-        container.innerHTML = posts.map(post => `
+        container.innerHTML = posts.map(post => {
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = post.content;
+            const plainContent = tempDiv.textContent || tempDiv.innerText || '';
+
+            return `
             <div class="bg-white rounded-2xl shadow-sm border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden group">
                 <div class="p-6">
                     <div class="flex items-start justify-between mb-4">
@@ -209,34 +214,34 @@ async function loadPosts(categoryId = null) {
                         ${getSpamBadge(post.is_spam, post.spam_score)}
                     </div>
 
-                    <p class="text-gray-600 mb-4 leading-relaxed">${post.content.substring(0, 200)}${post.content.length > 200 ? '...' : ''}</p>
+                    <p class="text-gray-600 mb-4 leading-relaxed break-words">${plainContent.substring(0, 200)}${plainContent.length > 200 ? '...' : ''}</p>
 
-                    <div class="flex items-center justify-between">
-                        <div class="flex items-center space-x-4 text-sm text-gray-500">
-                            <span class="flex items-center">
-                                <i class="fas fa-user mr-1 text-blue-500"></i>
+                    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+                        <div class="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm text-gray-500">
+                            <span class="flex items-center shrink-0">
+                                <i class="fas fa-user mr-1.5 text-blue-500"></i>
                                 ${post.author_username}
                             </span>
-                            <span class="flex items-center">
-                                <i class="fas fa-eye mr-1 text-green-500"></i>
+                            <span class="flex items-center shrink-0">
+                                <i class="fas fa-eye mr-1.5 text-green-500"></i>
                                 ${post.view_count}
                             </span>
-                            <span class="flex items-center">
-                                <i class="fas fa-comments mr-1 text-purple-500"></i>
+                            <span class="flex items-center shrink-0">
+                                <i class="fas fa-comments mr-1.5 text-purple-500"></i>
                                 ${post.comment_count}
                             </span>
-                            <span class="flex items-center">
-                                <i class="fas fa-clock mr-1 text-orange-500"></i>
+                            <span class="flex items-center shrink-0">
+                                <i class="fas fa-clock mr-1.5 text-orange-500"></i>
                                 ${timeAgo(post.created_at)}
                             </span>
                         </div>
-                        <span class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        <a href="/category/${post.category_id}" class="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors shrink-0">
                             ${post.category_name}
-                        </span>
+                        </a>
                     </div>
                 </div>
             </div>
-        `).join('');
+        `}).join('');
 
     } catch (error) {
         console.error('Error loading posts:', error);
@@ -292,8 +297,7 @@ async function loadPostDetail(postId) {
         let contentToRender;
         try {
             const edjsParser = edjsHTML();
-            // Используем content_json для рендеринга, если он есть, иначе - обычный content
-            const contentSource = post.content_json || post.content;
+            const contentSource = post.content_json || JSON.stringify({ blocks: [{ type: 'paragraph', data: { text: post.content } }] });
             const parsedContent = JSON.parse(contentSource);
             contentToRender = edjsParser.parse(parsedContent).join('');
         } catch (error) {
