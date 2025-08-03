@@ -1,0 +1,177 @@
+[
+  {
+    "title": "Getting Started with Docker",
+    "content": "Docker is a platform for developing, shipping, and running applications in containers. This guide will walk you through the basics of writing a Dockerfile, building an image, and running a container. It's an essential skill for modern developers.",
+    "tags": ["docker", "containers", "development", "devops"],
+    "label": "legitimate",
+    "category": "Технологии"
+  },
+  {
+    "title": "Understanding React Hooks",
+    "content": "React Hooks, introduced in React 16.8, allow you to use state and other React features without writing a class. This post explores the most common hooks like useState, useEffect, and useContext with practical examples.",
+    "tags": ["react", "javascript", "frontend", "webdev"],
+    "label": "legitimate",
+    "category": "Технологии"
+  },
+  {
+    "title": "A Guide to Personal Budgeting",
+    "content": "Creating a budget is the first step towards financial freedom. We'll cover the 50/30/20 rule, how to track your expenses, and tips for cutting costs without sacrificing your quality of life. Take control of your money today!",
+    "tags": ["budgeting", "finance", "savings", "money"],
+    "label": "legitimate",
+    "category": "Финансы"
+  },
+  {
+    "title": "The Benefits of a Mediterranean Diet",
+    "content": "The Mediterranean diet is rich in fruits, vegetables, whole grains, and healthy fats. Studies show it can reduce the risk of heart disease, improve brain function, and help with weight management. Here are some simple recipes to get you started.",
+    "tags": ["health", "diet", "nutrition", "wellness"],
+    "label": "legitimate",
+    "category": "Здоровье"
+  },
+  {
+    "title": "My Favorite Movies of Last Year",
+    "content": "Last year was great for cinema. I wanted to share a few of my top picks, from indie dramas to big-budget blockbusters. Let me know in the comments what your favorite movies were!",
+    "tags": ["movies", "film", "review", "entertainment"],
+    "label": "legitimate",
+    "category": "Флуд"
+  },
+  {
+    "title": "How to Brew the Perfect Cup of Coffee",
+    "content": "The secret to a great cup of coffee is in the details: the quality of the beans, the grind size, the water temperature, and the brewing method. This guide covers everything from pour-over to French press.",
+    "tags": ["coffee", "hobby", "lifestyle", "guide"],
+    "label": "legitimate",
+    "category": "Общие"
+  },
+  {
+    "title": "Introduction to Python for Beginners",
+    "content": "Python is a versatile and beginner-friendly programming language. This tutorial covers the basic syntax, data types, and control structures. By the end, you'll be able to write your first simple Python program.",
+    "tags": ["python", "programming", "tutorial", "beginners"],
+    "label": "legitimate",
+    "category": "Технологии"
+  },
+  {
+    "title": "Investing in Index Funds vs. Individual Stocks",
+    "content": "For most people, investing in low-cost index funds is a smarter strategy than trying to pick individual winning stocks. This post breaks down the pros and cons of each approach and explains the power of diversification.",
+    "tags": ["investing", "stocks", "index_funds", "finance"],
+    "label": "legitimate",
+    "category": "Финансы"
+  },
+  {
+    "title": "The Importance of Regular Exercise",
+    "content": "Regular physical activity is crucial for both physical and mental health. It can boost your mood, improve sleep, and strengthen your immune system. Find an activity you enjoy to make it a sustainable habit.",
+    "tags": ["exercise", "fitness", "health", "mental_health"],
+    "label": "legitimate",
+    "category": "Здоровье"
+  },
+  {
+    "title": "Best Sci-Fi Books of the Decade",
+    "content": "From epic space operas to thought-provoking dystopias, the last decade has been amazing for science fiction. Here are 10 books that every sci-fi fan should have on their reading list.",
+    "tags": ["books", "reading", "sci-fi", "recommendations"],
+    "label": "legitimate",
+    "category": "Флуд"
+  },
+  {
+    "title": "How to Set Up a CI/CD Pipeline with GitHub Actions",
+    "content": "Automating your build and deployment process with CI/CD can save you time and reduce errors. This tutorial shows how to create a simple pipeline using GitHub Actions to test and deploy a web application.",
+    "tags": ["cicd", "github", "automation", "devops"],
+    "label": "legitimate",
+    "category": "Технологии"
+  },
+  {
+    "title": "Understanding Compound Interest",
+    "content": "Albert Einstein reportedly called compound interest the eighth wonder of the world. This article explains how it works and why starting to save and invest early can have a massive impact on your long-term wealth.",
+    "tags": ["finance", "investing", "wealth", "compound_interest"],
+    "label": "legitimate",
+    "category": "Финансы"
+  },
+  {
+    "title": "Tips for Better Sleep",
+    "content": "Quality sleep is as important as diet and exercise. Some tips for improving your sleep hygiene include sticking to a regular schedule, creating a relaxing bedtime routine, and optimizing your bedroom environment.",
+    "tags": ["sleep", "health", "wellness", "habits"],
+    "label": "legitimate",
+    "category": "Здоровье"
+  },
+  {
+    "title": "My Experience Traveling to Japan",
+    "content": "I recently spent two weeks exploring Japan, from the bustling streets of Tokyo to the serene temples of Kyoto. Here are some highlights from my trip, along with tips for anyone planning a visit.",
+    "tags": ["travel", "japan", "culture", "adventure"],
+    "label": "legitimate",
+    "category": "Общие"
+  },
+  {
+    "title": "What's the best gaming console right now?",
+    "content": "The debate between PlayStation, Xbox, and Nintendo Switch is always heated. Let's break down the pros and cons of each console, looking at their exclusive games, hardware, and online services. Which one do you think is the best?",
+    "tags": ["gaming", "playstation", "xbox", "nintendo"],
+    "label": "legitimate",
+    "category": "Флуд"
+  },
+  {
+    "title": "SQL vs. NoSQL: Which to Choose?",
+    "content": "Choosing the right database is a critical decision for any application. This article compares the relational (SQL) and non-relational (NoSQL) models, discussing their strengths, weaknesses, and ideal use cases.",
+    "tags": ["database", "sql", "nosql", "backend"],
+    "label": "legitimate",
+    "category": "Технологии"
+  },
+  {
+    "title": "How to Protect Yourself from Phishing Scams",
+    "content": "Phishing is a common type of online scam where criminals impersonate legitimate organizations to steal your personal information. Learn how to spot the warning signs, like suspicious links and urgent requests.",
+    "tags": ["security", "phishing", "privacy", "scams"],
+    "label": "legitimate",
+    "category": "Технологии"
+  },
+  {
+    "title": "The FIRE Movement: Financial Independence, Retire Early",
+    "content": "The FIRE movement is a lifestyle movement with the goal of gaining financial independence and retiring early. It involves aggressive saving and investing. Is it a realistic goal? Let's discuss the strategies and challenges.",
+    "tags": ["fire_movement", "finance", "retirement", "investing"],
+    "label": "legitimate",
+    "category": "Финансы"
+  },
+  {
+    "title": "The Benefits of Mindfulness and Meditation",
+    "content": "Mindfulness is the practice of being present and fully aware of the moment. Regular meditation can help reduce stress, improve focus, and increase self-awareness. Here's a simple 5-minute meditation to get started.",
+    "tags": ["meditation", "mindfulness", "health", "mental_health"],
+    "label": "legitimate",
+    "category": "Здоровье"
+  },
+  {
+    "title": "My Favorite Healthy and Easy Weeknight Recipes",
+    "content": "Eating healthy doesn't have to be complicated or time-consuming. Here are five of my go-to recipes for busy weeknights that are both delicious and nutritious. They are all ready in under 30 minutes.",
+    "tags": ["recipes", "cooking", "healthy_eating", "food"],
+    "label": "legitimate",
+    "category": "Здоровье"
+  },
+  {
+    "title": "What are your favorite board games?",
+    "content": "I'm looking to expand my board game collection. Lately, I've been really into games like 'Wingspan' and 'Catan'. What are some of your all-time favorites? Looking for recommendations for 2-4 players.",
+    "tags": ["board_games", "hobby", "games", "recommendations"],
+    "label": "legitimate",
+    "category": "Флуд"
+  },
+  {
+    "title": "Learning a New Language: Tips and Resources",
+    "content": "Learning a new language can be a rewarding experience. This post shares effective strategies like spaced repetition, immersion, and finding a language exchange partner. I'll also list some of the best apps and websites to help you on your journey.",
+    "tags": ["language_learning", "education", "self_improvement", "tips"],
+    "label": "legitimate",
+    "category": "Общие"
+  },
+  {
+    "title": "An Introduction to REST APIs",
+    "content": "A REST API (Representational State Transfer Application Programming Interface) is an architectural style for providing standards between computer systems on the web. We'll cover the core principles, including resources, methods (GET, POST, PUT, DELETE), and status codes.",
+    "tags": ["api", "rest", "webdev", "backend"],
+    "label": "legitimate",
+    "category": "Технологии"
+  },
+  {
+    "title": "Should You Rent or Buy a Home?",
+    "content": "The decision to rent or buy a home is one of the biggest financial choices you'll make. This article explores the financial and lifestyle factors to consider, including market conditions, your personal financial situation, and long-term goals.",
+    "tags": ["real_estate", "housing", "finance", "renting", "buying"],
+    "label": "legitimate",
+    "category": "Финансы"
+  },
+  {
+    "title": "The Science of Hydration: How Much Water Do You Really Need?",
+    "content": "The old '8 glasses a day' rule is a good starting point, but individual water needs can vary based on factors like age, activity level, and climate. Learn to recognize the signs of dehydration and the benefits of staying properly hydrated.",
+    "tags": ["hydration", "water", "health", "science"],
+    "label": "legitimate",
+    "category": "Здоровье"
+  }
+]
