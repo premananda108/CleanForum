@@ -202,16 +202,6 @@ async function showCommentSpamAnalysis(commentId) {
 function displaySpamAnalysis(analysis) {
     const content = document.getElementById('spam-analysis-content');
 
-    const getLabelBadge = (label) => {
-        if (label === 'spam') {
-            return '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">СПАМ</span>';
-        }
-        if (label === 'legitimate' || label === 'published') {
-            return '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full">ОК</span>';
-        }
-        return `<span class="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-200 rounded-full">${label}</span>`;
-    };
-
     let neighborsHtml = '';
     if (analysis.neighbors && analysis.neighbors.length > 0) {
         neighborsHtml = `
@@ -222,8 +212,8 @@ function displaySpamAnalysis(analysis) {
                         <div class="p-2 bg-gray-100 rounded-lg text-sm">
                             <a href="/posts/${neighbor.id}" target="_blank" class="text-blue-600 hover:underline">${neighbor.title || 'Комментарий без заголовка'}</a>
                             <div class="flex items-center justify-between mt-1">
-                                <span class="text-xs text-gray-500">Схожесть: <strong>${(1 - parseFloat(neighbor.score)).toFixed(2)}</strong></span>
-                                ${getLabelBadge(neighbor.label)}
+                                <!-- Используем getSpamBadge для консистентности -->
+                                ${getSpamBadge(neighbor.is_spam, neighbor.spam_score)}
                             </div>
                         </div>
                     `).join('')}

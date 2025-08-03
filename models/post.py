@@ -375,7 +375,7 @@ class Post:
 
     @staticmethod
     async def get_similar_posts(post_id: str, limit: int = 5) -> List['PostResponse']:
-        """Найти похожие посты, используя векторный поиск с фильтрацией по статусу."""
+        """Найти похожие посты, используя векторный поиск."""
         import logging
         from services.redis_manager import vector_manager
 
@@ -390,22 +390,19 @@ class Post:
 
         logging.info(f"Вектор для {vector_doc_id} успешно получен.")
 
-        # Ищем похожие посты, фильтруя только опубликованные (`published`)
         try:
             # Запрашиваем на один больше, т.к. сам пост может вернуться
             similar_results = await vector_manager.search_similar(
-                post_vector, 
-                k=limit + 1, 
-                pre_filter={"label": PostStatus.PUBLISHED.value}
+                post_vector,
+                k=limit + 5  # Запрашиваем больше, чтобы компенсировать фильтрацию
             )
-            logging.info(f"Найдено {len(similar_results)} похожих и опубликованных результатов для {vector_doc_id}.")
+            logging.info(f"Найдено {len(similar_results)} похожих результатов для {vector_doc_id}.")
         except Exception as e:
             logging.error(f"Ошибка при поиске похожих векторов для {vector_doc_id}: {e}", exc_info=True)
             return []
 
         similar_posts = []
         for result in similar_results:
-            # Пропускаем сам пост
             similar_post_id = result.get('doc_id', '').replace('post:', '')
             if not similar_post_id or similar_post_id == post_id:
                 continue
@@ -416,15 +413,16 @@ class Post:
                 continue
 
             post = await Post.get_by_id(similar_post_id)
-            if post:
+            # Фильтруем по статусу уже после получения поста
+            if post and post.status == PostStatus.PUBLISHED:
                 similar_posts.append(post)
             else:
-                logging.warning(f"Не удалось получить данные для похожего поста {similar_post_id}, хотя он был найден в поиске.")
+                logging.warning(f"Похожий пост {similar_post_id} отфильтрован (статус: {post.status if post else 'N/A'}).")
 
             if len(similar_posts) >= limit:
                 break
-        
-        logging.info(f"Возвращаем {len(similar_posts)} похожих постов для {post_id}.")
+
+        logging.info(f"Возвращаем {len(similar_posts)} похожих и опубликованных постов для {post_id}.")
         return similar_posts
 
 
