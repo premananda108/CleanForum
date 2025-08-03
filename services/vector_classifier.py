@@ -79,35 +79,59 @@ class VectorSpamClassifier:
         final_result = self._combine_results(heuristic_result, vector_result)
 
         # 6. Сохраняем вектор поста в базу (для обучения будущих классификаций)
-        label = PostStatus.SPAM.value if final_result["is_spam"] else PostStatus.PUBLISHED.value
         vector_doc_id = f"post:{post_id}"
-        await vector_manager.add_vector(vector_doc_id, post_vector, label, "post", f"{title} - {content[:500]}")
+        await vector_manager.add_vector(vector_doc_id, post_vector, title, content)
 
         # 7. Сохраняем полный результат анализа
         await self._save_analysis_result(post_id, final_result, "post")
 
         return final_result
 
-    async def _classify_by_similarity(self, similar_posts: List[Dict[str, Any]]) -> Dict[str, Any]:
-        """Классификация на основе голосования похожих постов"""
+    async def _classify_by_similarity(self, similar_docs: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Классификация на основе голосования похожих документов.
+        Статус (спам/не спам) каждого соседа запрашивается из основной БД в реальном времени.
+        """
+        from models.post import Post  # Избегаем циклического импорта
+        from models.comment import Comment
 
-        if not similar_posts:
+        if not similar_docs:
             return {
-                "vector_prediction": "unknown",
-                "vector_confidence": 0.0,
-                "similar_posts_count": 0,
-                "spam_neighbors": 0,
-                "legitimate_neighbors": 0
+                "vector_prediction": "unknown", "vector_confidence": 0.0,
+                "similar_posts_count": 0, "spam_neighbors": 0,
+                "legitimate_neighbors": 0, "neighbors": []
             }
 
-        # Собираем голоса
-        labels = [post.get("label", "legitimate") for post in similar_posts]
-        label_counts = Counter(labels)
+        spam_votes = 0
+        legitimate_votes = 0
+        neighbor_details = []
 
-        # Определяем предсказание
-        total_votes = len(labels)
-        spam_votes = label_counts.get("spam", 0)
-        legitimate_votes = label_counts.get("legitimate", 0)
+        for doc in similar_docs:
+            doc_id_full = doc.get("doc_id", "")
+            is_post = doc_id_full.startswith("post:")
+            entity_id = doc_id_full.replace("post:", "").replace("comment:", "")
+
+            if not entity_id:
+                continue
+
+            # Получаем актуальный статус из основной базы данных
+            entity = await Post.get_by_id(entity_id) if is_post else await Comment.get_by_id(entity_id)
+
+            if entity:
+                if entity.is_spam:
+                    spam_votes += 1
+                else:
+                    legitimate_votes += 1
+                neighbor_details.append(entity)
+
+        total_votes = spam_votes + legitimate_votes
+        if total_votes == 0:
+             return {
+                "vector_prediction": "unknown", "vector_confidence": 0.0,
+                "similar_posts_count": 0, "spam_neighbors": 0,
+                "legitimate_neighbors": 0, "neighbors": []
+            }
+
 
         if spam_votes > legitimate_votes:
             prediction = "spam"
@@ -119,11 +143,10 @@ class VectorSpamClassifier:
         return {
             "vector_prediction": prediction,
             "vector_confidence": confidence,
-            "similar_posts_count": total_votes,
+            "similar_posts_count": len(neighbor_details),
             "spam_neighbors": spam_votes,
             "legitimate_neighbors": legitimate_votes,
-            "neighbor_scores": [(post.get("score", 0), post.get("label", "unknown"))
-                               for post in similar_posts[:5]]  # Показываем топ-5
+            "neighbors": neighbor_details
         }
 
     def _combine_results(self, heuristic: Dict[str, Any], vector: Dict[str, Any]) -> Dict[str, Any]:
@@ -163,13 +186,17 @@ class VectorSpamClassifier:
             "similar_posts_count": vector.get("similar_posts_count", 0),
             "spam_neighbors": vector.get("spam_neighbors", 0),
             "legitimate_neighbors": vector.get("legitimate_neighbors", 0),
-            "neighbor_scores": vector.get("neighbor_scores", []),
+            "neighbors": vector.get("neighbors", []),
             "user_age_days": heuristic.get("user_age_days", 0)
         }
 
     async def _save_analysis_result(self, entity_id: str, result: Dict[str, Any], entity_type: str):
         """Сохранить результат анализа (для поста или комментария)"""
         analysis_key = f"vector_analysis:{entity_type}:{entity_id}"
+
+        # Конвертируем Pydantic модели в словари для JSON-сериализации
+        neighbors_as_dicts = [neighbor.model_dump() for neighbor in result.get("neighbors", [])]
+
         analysis_data = {
             "entity_id": entity_id,
             "type": entity_type,
@@ -180,7 +207,8 @@ class VectorSpamClassifier:
             "vector_prediction": result["vector_prediction"],
             "vector_confidence": result["vector_confidence"],
             "similar_posts_count": result["similar_posts_count"],
-            "reasons": json.dumps(result["reasons"]),
+            "reasons": json.dumps(result.get("reasons", [])),
+            "neighbors": json.dumps(neighbors_as_dicts, default=str), # default=str для обработки datetime
             "analyzed_at": datetime.now().isoformat()
         }
         await db.hset(analysis_key, mapping=analysis_data)
@@ -203,38 +231,13 @@ class VectorSpamClassifier:
         final_result = self._combine_results(heuristic_result, vector_result)
 
         # 6. Сохраняем вектор
-        label = PostStatus.SPAM.value if final_result["is_spam"] else "legitimate"
-        # Используем префикс, чтобы отличать векторы комментариев
         vector_doc_id = f"comment:{comment_id}"
-        await vector_manager.add_vector(vector_doc_id, comment_vector, label, "comment", content[:500])
+        await vector_manager.add_vector(vector_doc_id, comment_vector, content[:100], content)
 
         # 7. Сохраняем результат анализа
         await self._save_analysis_result(comment_id, final_result, "comment")
 
         return final_result
-
-    async def retrain_with_feedback(self, entity_id: str, entity_type: str, is_spam: bool, moderator_id: str):
-        """Переобучение на основе обратной связи модератора"""
-        logging.info(f"💡 Получена обратная связь для {entity_type} {entity_id} от модератора {moderator_id}: {'спам' if is_spam else 'не спам'}")
-        feedback_key = f"feedback:{entity_type}:{entity_id}"
-        await db.hset(feedback_key, mapping={
-            "entity_id": entity_id,
-            "type": entity_type,
-            "is_spam": str(is_spam),
-            "moderator_id": moderator_id,
-            "feedback_at": datetime.now().isoformat()
-        })
-
-        # Обновляем метку в векторной базе
-        vector_doc_id = f"{entity_type}:{entity_id}"
-        new_label = PostStatus.SPAM.value if is_spam else PostStatus.PUBLISHED.value
-        
-        # Немедленно обновляем метку в Redis
-        success = await vector_manager.update_vector_label(vector_doc_id, new_label)
-        if success:
-            logging.info(f"Метка для вектора {vector_doc_id} успешно обновлена на '{new_label}'.")
-        else:
-            logging.error(f"Не удалось обновить метку для вектора {vector_doc_id}.")
 
     async def get_classification_stats(self) -> Dict[str, Any]:
         """Получить статистику классификации"""

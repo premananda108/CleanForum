@@ -50,13 +50,13 @@ async def clear_database():
         await db.disconnect()
 
 async def main():
+    # Запрашиваем подтверждение
+    confirmation = input("Вы уверены, что хотите удалить ВСЕ данные? Введите 'YES' для подтверждения: ")
+
     """Главная функция"""
     logging.info("🗑️  Скрипт очистки базы данных")
     logging.info("=" * 50)
-    
-    # Запрашиваем подтверждение
-    confirmation = input("Вы уверены, что хотите удалить ВСЕ данные? Введите 'YES' для подтверждения: ")
-    
+
     if confirmation == "YES":
         await clear_database()
     else:

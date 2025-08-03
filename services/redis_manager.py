@@ -50,7 +50,6 @@ class RedisVectorManager:
                 "TYPE", "FLOAT32",
                 "DIM", str(self.vector_dim),
                 "DISTANCE_METRIC", "COSINE",
-                "label", "TAG",
                 "title", "TEXT",
                 "content", "TEXT"
             ]
@@ -63,8 +62,8 @@ class RedisVectorManager:
             )
             logging.info(f"Создан векторный индекс {self.index_name}")
 
-    async def add_vector(self, doc_id: str, vector: np.ndarray, 
-                        label: str, title: str, content: str) -> bool:
+    async def add_vector(self, doc_id: str, vector: np.ndarray,
+                        title: str, content: str) -> bool:
         """Добавить вектор в индекс"""
         try:
             doc_key = f"vector:{doc_id}"
@@ -75,7 +74,6 @@ class RedisVectorManager:
             # Сохраняем документ
             await self.redis_client.hset(doc_key, mapping={
                 "vector": vector_bytes,
-                "label": label.encode('utf-8'),
                 "title": title.encode('utf-8'),
                 "content": content[:500].encode('utf-8'),  # Ограничиваем и кодируем
                 "doc_id": doc_id.encode('utf-8')
@@ -106,14 +104,14 @@ class RedisVectorManager:
 
             # Объединяем фильтр с KNN запросом
             query = f"{filter_str}=>[KNN {k} @vector $blob AS score]"
-            
+
             logging.debug(f"Executing vector search query: {query}")
 
             results = await self.redis_client.execute_command(
                 "FT.SEARCH", self.index_name, query,
                 "PARAMS", "2", "blob", query_bytes,
                 "DIALECT", "2",
-                "RETURN", "4", "score", "label", "title", "doc_id"
+                "RETURN", "3", "score", "title", "doc_id"
             )
 
             # Парсим результаты
@@ -122,12 +120,11 @@ class RedisVectorManager:
                 for i in range(1, len(results), 2):
                     if i + 1 < len(results):
                         doc_data = results[i + 1]
-                        if len(doc_data) >= 8:
+                        if len(doc_data) >= 6:
                             parsed_results.append({
-                                "doc_id": doc_data[7].decode(errors='ignore'),
+                                "doc_id": doc_data[5].decode(errors='ignore'),
                                 "score": float(doc_data[1]),
-                                "label": doc_data[3].decode(errors='ignore'),
-                                "title": doc_data[5].decode(errors='ignore')
+                                "title": doc_data[3].decode(errors='ignore')
                             })
             return parsed_results
 
@@ -180,23 +177,6 @@ class RedisVectorManager:
             return True
         except Exception as e:
             logging.error(f"Vector Manager: ошибка удаления вектора {doc_id}: {e}")
-            return False
-
-    async def update_vector_label(self, doc_id: str, new_label: str) -> bool:
-        """Обновить метку (label) для существующего вектора."""
-        try:
-            doc_key = f"vector:{doc_id}"
-            # Проверяем, существует ли документ
-            if not await self.redis_client.exists(doc_key):
-                logging.warning(f"Vector Manager: попытка обновить несуществующий вектор {doc_id}")
-                return False
-
-            # Обновляем только поле label
-            await self.redis_client.hset(doc_key, "label", new_label)
-            logging.info(f"Vector Manager: метка для вектора {doc_id} обновлена на '{new_label}'.")
-            return True
-        except Exception as e:
-            logging.error(f"Vector Manager: ошибка обновления метки для вектора {doc_id}: {e}")
             return False
 
 # Глобальный экземпляр менеджера

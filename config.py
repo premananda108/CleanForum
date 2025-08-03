@@ -12,7 +12,7 @@ load_dotenv()
 class Settings:
     # Основные настройки
     APP_NAME: str = "CleanForum"
-    APP_VERSION: str = "0.2.0"
+    APP_VERSION: str = "0.3.0"
     RELOAD: bool = True
 
     # Настройки логирования
@@ -33,7 +33,7 @@ class Settings:
     # Vector Settings
     VECTOR_INDEX_NAME: str = "forum_posts_index"
     VECTOR_DIM: int = 384  # для all-MiniLM-L6-v2
-    SIMILARITY_THRESHOLD: float = 0.25 # Порог для определения похожих постов (чем меньше, тем строже)
+    SIMILARITY_THRESHOLD: float = 0.5 # Порог для определения похожих постов (чем меньше, тем строже)
 
     # Spam Detection
     SPAM_THRESHOLD: float = 0.7
