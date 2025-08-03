@@ -81,7 +81,7 @@ class VectorSpamClassifier:
         # 6. Сохраняем вектор поста в базу (для обучения будущих классификаций)
         label = PostStatus.SPAM.value if final_result["is_spam"] else PostStatus.PUBLISHED.value
         vector_doc_id = f"post:{post_id}"
-        await vector_manager.add_vector(vector_doc_id, post_vector, label, "post", f"{title} - {content[:500]}")
+        await vector_manager.add_vector(vector_doc_id, post_vector, label, title, content)
 
         # 7. Сохраняем полный результат анализа
         await self._save_analysis_result(post_id, final_result, "post")
@@ -218,7 +218,7 @@ class VectorSpamClassifier:
         label = PostStatus.SPAM.value if final_result["is_spam"] else "legitimate"
         # Используем префикс, чтобы отличать векторы комментариев
         vector_doc_id = f"comment:{comment_id}"
-        await vector_manager.add_vector(vector_doc_id, comment_vector, label, "comment", content[:500])
+        await vector_manager.add_vector(vector_doc_id, comment_vector, label, content[:100], content)
 
         # 7. Сохраняем результат анализа
         await self._save_analysis_result(comment_id, final_result, "comment")
