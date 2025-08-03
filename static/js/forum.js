@@ -200,8 +200,10 @@ async function loadPosts(categoryId = null) {
         }
 
         container.innerHTML = posts.map(post => {
+            // Сначала рендерим Markdown в HTML, потом извлекаем чистый текст
+            const renderedHtml = marked.parse(post.content);
             const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = post.content;
+            tempDiv.innerHTML = renderedHtml;
             const plainContent = tempDiv.textContent || tempDiv.innerText || '';
 
             return `
