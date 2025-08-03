@@ -535,35 +535,6 @@ function renderSimilarPosts(posts) {
     `;
 }
 
-function renderSimilarPosts(posts) {
-    const container = document.getElementById('similar-posts-container');
-    if (!container) return;
-
-    if (!posts || posts.length === 0) {
-        container.innerHTML = `
-            <div class="text-center py-6 text-gray-500">
-                <i class="fas fa-search mb-2 text-2xl"></i>
-                <p class="text-sm">Похожих постов не найдено</p>
-            </div>
-        `;
-        return;
-    }
-
-    container.innerHTML = `
-        <div class="space-y-3">
-            ${posts.map(post => `
-                <a href="/posts/${post.id}" class="block p-4 rounded-xl hover:bg-gray-50 transition-colors group">
-                    <h4 class="font-medium text-gray-800 group-hover:text-blue-600 text-sm mb-2 leading-snug">${post.title}</h4>
-                    <div class="flex items-center text-xs text-gray-500">
-                        <i class="fas fa-user mr-1"></i>
-                        <span>${post.author_username}</span>
-                    </div>
-                </a>
-            `).join('')}
-        </div>
-    `;
-}
-
 async function loadStatsForHomePage() {
     try {
         const stats = await api.getSystemStats();
