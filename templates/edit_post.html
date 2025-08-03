@@ -26,8 +26,16 @@
 
                 <!-- Содержание -->
                 <div class="space-y-2">
-                    <label class="block text-sm font-semibold text-gray-700">Содержание</label>
-                    <div id="editorjs" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus-within:ring-4 focus-within:ring-green-50 focus-within:border-green-500 transition-all"></div>
+                    <label for="post-content" class="block text-sm font-semibold text-gray-700">
+                        Содержание (поддерживается Markdown)
+                    </label>
+                    <textarea
+                        id="post-content"
+                        required
+                        minlength="10"
+                        rows="12"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-50 focus:border-green-500 transition-all"
+                    ></textarea>
                 </div>
 
                 <!-- Категория и теги -->
@@ -58,24 +66,12 @@
 
 {% block scripts %}
 {{ super() }}
-<!-- Editor.js and tools -->
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest"></script>
-
+<!-- Скрипты для Editor.js удалены -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const postId = '{{ post.id }}';
-        // Вызываем новую функцию инициализации со страницы forum.js
-        if (typeof initEditPostPage === 'function') {
-            initEditPostPage(postId);
-        } else {
-            console.error('Функция initEditPostPage не найдена. Убедитесь, что forum.js загружен.');
-            // showAlert('Произошла ошибка при загрузке редактора.', 'danger');
-        }
+        // Заполняем поля формы данными поста
+        // Эта логика будет перенесена в forum.js для унификации
     });
 </script>
 {% endblock %}

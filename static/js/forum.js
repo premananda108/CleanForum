@@ -294,16 +294,8 @@ async function loadPostDetail(postId) {
 
         document.title = `${post.title} - CleanForum`;
 
-        let contentToRender;
-        try {
-            const edjsParser = edjsHTML();
-            const contentSource = post.content_json || JSON.stringify({ blocks: [{ type: 'paragraph', data: { text: post.content } }] });
-            const parsedContent = JSON.parse(contentSource);
-            contentToRender = edjsParser.parse(parsedContent).join('');
-        } catch (error) {
-            console.warn("Не удалось обработать содержимое поста как JSON, будет отображен обычный текст.", post.content);
-            contentToRender = post.content.replace(/\n/g, '<br>');
-        }
+        // Используем marked.js для рендеринга Markdown
+        const contentToRender = marked.parse(post.content);
 
         container.innerHTML = `
             <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
@@ -642,44 +634,6 @@ async function initCreatePostPage() {
         console.error('Error loading categories for select:', error);
     }
 
-    // Инициализируем EditorJS
-    const editor = new EditorJS({
-        holder: 'editorjs',
-        tools: {
-            paragraph: {
-                class: window.Paragraph,
-                inlineToolbar: true,
-            },
-            header: {
-                class: window.Header,
-                inlineToolbar: ['link'],
-                config: {
-                    placeholder: 'Введите заголовок',
-                    levels: [2, 3, 4],
-                    defaultLevel: 2
-                }
-            },
-            list: {
-                class: window.EditorjsList,
-                inlineToolbar: true
-            },
-            quote: {
-                class: window.Quote,
-                inlineToolbar: true,
-                shortcut: 'CMD+SHIFT+O',
-                config: {
-                    quotePlaceholder: 'Введите цитату',
-                    captionPlaceholder: 'Автор цитаты',
-                },
-            },
-            code: {
-                class: window.CodeTool
-            }
-        },
-        placeholder: 'Начните писать вашу историю...',
-        defaultBlock: 'paragraph',
-    });
-
     // Настраиваем отправку формы
     const form = document.getElementById('create-post-form');
     if (!form) return;
@@ -693,25 +647,17 @@ async function initCreatePostPage() {
         submitBtn.disabled = true;
 
         try {
-            const savedData = await editor.save();
-
-            // --- ИСПРАВЛЕНИЕ НАЧАЛО ---
-            // Ищем заголовок внутри данных Editor.js
-            const headerBlock = savedData.blocks.find(block => block.type === 'header');
-            const title = headerBlock ? headerBlock.data.text : document.getElementById('post-title').value;
-
-            if (!title) {
-                showAlert('Заголовок не может быть пустым.', 'warning');
-                throw new Error("Title is required."); // Прерываем выполнение
-            }
-
             const postData = {
-                title: title,
-                content: JSON.stringify(savedData),
+                title: document.getElementById('post-title').value,
+                content: document.getElementById('post-content').value,
                 category_id: document.getElementById('post-category').value,
                 tags: document.getElementById('post-tags').value.split(',').map(tag => tag.trim()).filter(tag => tag)
             };
-            // --- ИСПРАВЛЕНИЕ КОНЕЦ ---
+
+            if (!postData.title || !postData.content || !postData.category_id) {
+                 showAlert('Заполните все обязательные поля: заголовок, содержание и категория.', 'warning');
+                 throw new Error("Required fields are missing.");
+            }
 
             const newPost = await api.createPost(postData);
 
@@ -865,7 +811,8 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (path.startsWith('/posts/')) {
         const parts = path.split('/').filter(p => p);
         if (parts.length === 3 && parts[2] === 'edit') {
-            // This is handled by the script in edit_post.html
+            const postId = parts[1];
+            initEditPostPage(postId);
         } else if (parts.length === 2) {
             const postId = parts[1];
             loadPostDetail(postId);
@@ -878,11 +825,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function initEditPostPage(postId) {
     const form = document.getElementById('edit-post-form');
+    if (!form) return;
+
     const titleInput = document.getElementById('post-title');
+    const contentInput = document.getElementById('post-content');
     const categorySelect = document.getElementById('post-category');
     const tagsInput = document.getElementById('post-tags');
-
-    let editor;
 
     // 1. Загрузка категорий и данных поста параллельно
     try {
@@ -896,24 +844,9 @@ async function initEditPostPage(postId) {
 
         // Заполняем поля формы
         titleInput.value = post.title;
+        contentInput.value = post.content; // Теперь просто текст
         categorySelect.value = post.category_id;
         tagsInput.value = post.tags.join(', ');
-
-        // 2. Инициализация EditorJS
-        const editorData = post.content_json ? JSON.parse(post.content_json) : { blocks: [] };
-
-        editor = new EditorJS({
-            holder: 'editorjs',
-            tools: {
-                paragraph: { class: window.Paragraph, inlineToolbar: true },
-                header: { class: window.Header, inlineToolbar: ['link'] },
-                list: { class: window.EditorjsList, inlineToolbar: true },
-                quote: { class: window.Quote, inlineToolbar: true },
-                code: { class: window.CodeTool }
-            },
-            data: editorData,
-            placeholder: 'Начните писать вашу историю...',
-        });
 
     } catch (error) {
         console.error('Error loading data for edit page:', error);
@@ -922,25 +855,23 @@ async function initEditPostPage(postId) {
         return;
     }
 
-    // 3. Обработка отправки формы
-    if (form) {
-        form.addEventListener('submit', async (event) => {
-            event.preventDefault();
-            const submitBtn = form.querySelector('button[type="submit"]');
-            const originalText = submitBtn.innerHTML;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Сохранение...';
-            submitBtn.disabled = true;
+    // 2. Обработка отправки формы
+    form.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Сохранение...';
+        submitBtn.disabled = true;
 
-            try {
-                const savedData = await editor.save();
-                const postData = {
-                    title: titleInput.value,
-                    content: JSON.stringify(savedData),
-                    category_id: categorySelect.value,
-                    tags: tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag)
-                };
+        try {
+            const postData = {
+                title: titleInput.value,
+                content: contentInput.value,
+                category_id: categorySelect.value,
+                tags: tagsInput.value.split(',').map(tag => tag.trim()).filter(tag => tag)
+            };
 
-                await api.updatePost(postId, postData);
+            await api.updatePost(postId, postData);
                 showAlert('Пост успешно обновлен!', 'success');
                 setTimeout(() => window.location.href = `/posts/${postId}`, 1500);
 
