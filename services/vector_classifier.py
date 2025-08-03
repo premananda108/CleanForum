@@ -97,7 +97,8 @@ class VectorSpamClassifier:
                 "vector_confidence": 0.0,
                 "similar_posts_count": 0,
                 "spam_neighbors": 0,
-                "legitimate_neighbors": 0
+                "legitimate_neighbors": 0,
+                "neighbors": []
             }
 
         # Собираем голоса
@@ -111,10 +112,21 @@ class VectorSpamClassifier:
 
         if spam_votes > legitimate_votes:
             prediction = "spam"
-            confidence = spam_votes / total_votes
+            confidence = spam_votes / total_votes if total_votes > 0 else 0
         else:
             prediction = "legitimate"
-            confidence = legitimate_votes / total_votes
+            confidence = legitimate_votes / total_votes if total_votes > 0 else 0
+
+        # Собираем информацию о соседях для прозрачности
+        neighbors_info = [
+            {
+                "id": post.get("doc_id", "unknown").replace("post:", "").replace("comment:", ""),
+                "title": post.get("title", "N/A"),
+                "score": post.get("score", 0.0),
+                "label": post.get("label", "unknown")
+            }
+            for post in similar_posts
+        ]
 
         return {
             "vector_prediction": prediction,
@@ -122,8 +134,7 @@ class VectorSpamClassifier:
             "similar_posts_count": total_votes,
             "spam_neighbors": spam_votes,
             "legitimate_neighbors": legitimate_votes,
-            "neighbor_scores": [(post.get("score", 0), post.get("label", "unknown"))
-                               for post in similar_posts[:5]]  # Показываем топ-5
+            "neighbors": neighbors_info
         }
 
     def _combine_results(self, heuristic: Dict[str, Any], vector: Dict[str, Any]) -> Dict[str, Any]:
@@ -163,7 +174,7 @@ class VectorSpamClassifier:
             "similar_posts_count": vector.get("similar_posts_count", 0),
             "spam_neighbors": vector.get("spam_neighbors", 0),
             "legitimate_neighbors": vector.get("legitimate_neighbors", 0),
-            "neighbor_scores": vector.get("neighbor_scores", []),
+            "neighbors": vector.get("neighbors", []),
             "user_age_days": heuristic.get("user_age_days", 0)
         }
 
@@ -180,7 +191,8 @@ class VectorSpamClassifier:
             "vector_prediction": result["vector_prediction"],
             "vector_confidence": result["vector_confidence"],
             "similar_posts_count": result["similar_posts_count"],
-            "reasons": json.dumps(result["reasons"]),
+            "reasons": json.dumps(result.get("reasons", [])),
+            "neighbors": json.dumps(result.get("neighbors", [])),
             "analyzed_at": datetime.now().isoformat()
         }
         await db.hset(analysis_key, mapping=analysis_data)

@@ -38,6 +38,8 @@ class SpamAnalysisResponse(BaseModel):
     vector_confidence: float
     similar_posts_count: int
     analyzed_at: Optional[str] = None
+    similar_posts: List[PostResponse] = []
+    neighbors: List[Dict[str, Any]] = []
 
 # --- Эндпоинты для постов ---
 
@@ -53,6 +55,16 @@ async def get_post_analysis(post_id: str):
     if not analysis_data:
         raise HTTPException(status_code=404, detail="Анализ для поста не найден.")
 
+    # Получаем похожие посты (для отображения в UI)
+    similar_posts = await Post.get_similar_posts(post_id, limit=5)
+
+    # Получаем соседей, использованных при анализе
+    neighbors_json = analysis_data.get("neighbors", "[]")
+    try:
+        neighbors = json.loads(neighbors_json)
+    except json.JSONDecodeError:
+        neighbors = []
+
     return SpamAnalysisResponse(
         entity_id=analysis_data.get("entity_id"),
         spam_score=float(analysis_data.get("spam_score", 0)),
@@ -63,7 +75,9 @@ async def get_post_analysis(post_id: str):
         vector_prediction=analysis_data.get("vector_prediction", "unknown"),
         vector_confidence=float(analysis_data.get("vector_confidence", 0)),
         similar_posts_count=int(analysis_data.get("similar_posts_count", 0)),
-        analyzed_at=analysis_data.get("analyzed_at")
+        analyzed_at=analysis_data.get("analyzed_at"),
+        similar_posts=similar_posts,
+        neighbors=neighbors
     )
 
 @router.post("/moderate-post")
@@ -98,6 +112,14 @@ async def get_comment_analysis(comment_id: str):
     if not analysis_data:
         raise HTTPException(status_code=404, detail="Анализ для комментария не найден.")
 
+    # Получаем соседей, использованных при анализе
+    neighbors_json = analysis_data.get("neighbors", "[]")
+    try:
+        neighbors = json.loads(neighbors_json)
+    except json.JSONDecodeError:
+        neighbors = []
+
+    # Для комментариев похожие посты не ищем
     return SpamAnalysisResponse(
         entity_id=analysis_data.get("entity_id"),
         spam_score=float(analysis_data.get("spam_score", 0)),
@@ -108,7 +130,9 @@ async def get_comment_analysis(comment_id: str):
         vector_prediction=analysis_data.get("vector_prediction", "unknown"),
         vector_confidence=float(analysis_data.get("vector_confidence", 0)),
         similar_posts_count=int(analysis_data.get("similar_posts_count", 0)),
-        analyzed_at=analysis_data.get("analyzed_at")
+        analyzed_at=analysis_data.get("analyzed_at"),
+        similar_posts=[],
+        neighbors=neighbors
     )
 
 @router.post("/moderate-comment")

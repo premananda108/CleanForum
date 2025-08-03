@@ -201,6 +201,56 @@ async function showCommentSpamAnalysis(commentId) {
 
 function displaySpamAnalysis(analysis) {
     const content = document.getElementById('spam-analysis-content');
+
+    const getLabelBadge = (label) => {
+        if (label === 'spam') {
+            return '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">СПАМ</span>';
+        }
+        if (label === 'legitimate') {
+            return '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full">ОК</span>';
+        }
+        return `<span class="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-200 rounded-full">${label}</span>`;
+    };
+
+    let neighborsHtml = '';
+    if (analysis.neighbors && analysis.neighbors.length > 0) {
+        neighborsHtml = `
+            <div class="mt-6 border-t pt-4">
+                <h6 class="font-bold text-gray-700 mb-2">Соседи по векторам (влияющие на оценку):</h6>
+                <div class="space-y-2">
+                    ${analysis.neighbors.map(neighbor => `
+                        <div class="p-2 bg-gray-100 rounded-lg text-sm">
+                            <a href="/posts/${neighbor.id}" target="_blank" class="text-blue-600 hover:underline">${neighbor.title || 'Комментарий без заголовка'}</a>
+                            <div class="flex items-center justify-between mt-1">
+                                <span class="text-xs text-gray-500">Схожесть: <strong>${(1 - neighbor.score).toFixed(2)}</strong></span>
+                                ${getLabelBadge(neighbor.label)}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    }
+
+    let similarPostsHtml = '';
+    if (analysis.similar_posts && analysis.similar_posts.length > 0) {
+        similarPostsHtml = `
+            <div class="mt-6 border-t pt-4">
+                <h6 class="font-bold text-gray-700 mb-2">Похожие посты (в реальном времени):</h6>
+                 <ul class="list-disc list-inside space-y-2 text-gray-600">
+                    ${analysis.similar_posts.map(post => `
+                        <li>
+                            <a href="/posts/${post.id}" target="_blank" class="text-blue-600 hover:underline">
+                                ${post.title}
+                            </a>
+                            <span class="text-xs ml-2">${getSpamBadge(post.is_spam, post.spam_score)}</span>
+                        </li>
+                    `).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
     content.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-gray-50 p-4 rounded-lg">
@@ -211,8 +261,8 @@ function displaySpamAnalysis(analysis) {
             <div class="bg-gray-50 p-4 rounded-lg">
                 <h6 class="font-bold text-gray-700 mb-2">Детали анализа</h6>
                 <p class="text-sm text-gray-600">Эвристика: <span class="font-semibold">${(analysis.heuristic_score * 100).toFixed(1)}%</span></p>
-                <p class="text-sm text-gray-600">Векторный: <span class="font-semibold">${(analysis.vector_score * 100).toFixed(1)}%</span></p>
-                <p class="text-sm text-gray-600">Похожих элементов: <span class="font-semibold">${analysis.similar_posts_count}</span></p>
+                <p class="text-sm text-gray-600">Векторный: <span class="font-semibold">${(analysis.vector_score * 100).toFixed(1)}%</span> (Предсказание: ${analysis.vector_prediction})</p>
+                <p class="text-sm text-gray-600">Уверенность вектора: <span class="font-semibold">${(analysis.vector_confidence * 100).toFixed(1)}%</span></p>
             </div>
         </div>
         <div class="mt-6">
@@ -221,6 +271,8 @@ function displaySpamAnalysis(analysis) {
                 ${analysis.reasons.map(reason => `<li>${reason}</li>`).join('') || '<li>Причин не найдено</li>'}
             </ul>
         </div>
+        ${neighborsHtml}
+        ${similarPostsHtml}
     `;
     showModal('spamAnalysisModal');
 }
