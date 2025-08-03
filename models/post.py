@@ -413,16 +413,14 @@ class Post:
                 continue
 
             post = await Post.get_by_id(similar_post_id)
-            # Фильтруем по статусу уже после получения поста
-            if post and post.status == PostStatus.PUBLISHED:
+            # По требованию заказчика, убираем фильтрацию по статусу
+            if post:
                 similar_posts.append(post)
-            else:
-                logging.warning(f"Похожий пост {similar_post_id} отфильтрован (статус: {post.status if post else 'N/A'}).")
 
             if len(similar_posts) >= limit:
                 break
 
-        logging.info(f"Возвращаем {len(similar_posts)} похожих и опубликованных постов для {post_id}.")
+        logging.info(f"Возвращаем {len(similar_posts)} похожих постов для {post_id}.")
         return similar_posts
 
 
