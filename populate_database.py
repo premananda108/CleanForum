@@ -84,6 +84,7 @@ TEST_CATEGORIES = [
     }
 ]
 
+
 class DatabasePopulator:
     """Класс для заполнения базы данных тестовыми данными"""
 
@@ -111,6 +112,9 @@ class DatabasePopulator:
 
             # Выводим статистику
             await self.print_statistics()
+
+            # Запускаем анализ созданных постов
+            await self._analyze_created_posts()
 
             logging.info("✅ Заполнение базы данных завершено успешно!")
 
@@ -251,7 +255,9 @@ class DatabasePopulator:
                         logging.info(f"✓ Создан пост: {post_data['title'][:50]}... (ID: {post_id}, спам: {is_spam})")
 
                 except Exception as e:
-                    logging.error(f"Ошибка создания поста '{post_data.get('title', 'Без названия')}' из файла {filename}: {e}", exc_info=True)
+                    logging.error(
+                        f"Ошибка создания поста '{post_data.get('title', 'Без названия')}' из файла {filename}: {e}",
+                        exc_info=True)
 
         logging.info(f"📊 Всего создано постов из файлов: {posts_created}")
         logging.info(f"    -> Легитимных: {legit_posts_created}")
@@ -278,7 +284,7 @@ class DatabasePopulator:
         tech_tags = ["технологии", "ии", "программирование", "машинное_обучение", "камера", "фотография"]
         health_tags = ["здоровье", "питание", "диета", "похудение", "таблетки"]
         finance_tags = ["финансы", "деньги", "заработок", "bitcoin", "криптовалюта", "forex", "кредит", "трейдинг"]
-        
+
         lower_tags = [tag.lower() for tag in tags]
 
         if any(tag in lower_tags for tag in tech_tags):
@@ -288,50 +294,46 @@ class DatabasePopulator:
         elif any(tag in lower_tags for tag in health_tags):
             return self.created_categories[3] if len(self.created_categories) > 3 else self.created_categories[0]
 
-        return random.choice([self.created_categories[0], self.created_categories[4]]) if len(self.created_categories) > 4 else self.created_categories[0]
+        return random.choice([self.created_categories[0], self.created_categories[4]]) if len(
+            self.created_categories) > 4 else self.created_categories[0]
 
     async def create_post_without_spam_check(self, post_data: PostCreate, author_id: str, is_spam: bool = False) -> str:
         """
-        Создание поста БЕЗ проверки на спам (для заполнения тестовыми данными)
+        Создание поста БЕЗ проверки на спам (для заполнения тестовыми данными).
+        Версия, обновленная для работы с Markdown.
         """
         post_id = str(uuid.uuid4())
         now = datetime.now()
 
-        if isinstance(post_data.content, str):
-            try:
-                content_json = json.loads(post_data.content)
-            except json.JSONDecodeError:
-                content_json = {"blocks": [{"type": "paragraph", "data": {"text": post_data.content}}]}
-        else:
-            content_json = post_data.content
-
-        text_content = Post._extract_text_from_editorjs(json.dumps(content_json))
+        # Контент уже является Markdown текстом
+        text_content = post_data.content
         status = PostStatus.SPAM if is_spam else PostStatus.PUBLISHED
 
         post_info = {
             "id": post_id,
             "title": post_data.title,
-            "content": text_content,
-            "content_json": json.dumps(content_json),
+            "content": text_content,  # Сохраняем Markdown напрямую
             "category_id": post_data.category_id,
             "author_id": author_id,
             "tags": json.dumps(post_data.tags),
             "status": status.value,
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
-            "view_count": 0,
-            "comment_count": 0,
-            "vote_score": 0,
+            "view_count": random.randint(10, 1000),
+            "comment_count": random.randint(0, 50),
+            "vote_score": random.randint(-5, 20),
             "is_spam": str(is_spam),
-            "spam_score": 0.9 if is_spam else 0.1,
+            "spam_score": 0.95 if is_spam else random.uniform(0.01, 0.2),
             "reading_time": Post.calculate_reading_time(text_content)
         }
 
+        # Устанавливаем случайную дату создания для реалистичности
         days_ago = random.randint(1, 30)
         random_date = datetime.now() - timedelta(days=days_ago)
         post_info["created_at"] = random_date.isoformat()
         post_info["updated_at"] = random_date.isoformat()
 
+        # Сохраняем в Redis
         async with db.redis_client.pipeline(transaction=True) as pipe:
             pipe.hset(f"post:{post_id}", mapping=post_info)
             timestamp = random_date.timestamp()
@@ -342,20 +344,23 @@ class DatabasePopulator:
                 pipe.sadd("posts:spam", post_id)
             await pipe.execute()
 
+        # Добавляем вектор в поисковый индекс
         try:
             if not vector_classifier.is_initialized:
                 await vector_classifier.initialize()
+
             post_vector = vector_classifier.create_vector(post_data.title, text_content, post_data.tags)
+
             await vector_manager.add_vector(
                 doc_id=f"post:{post_id}",
                 vector=post_vector,
-                label=status.value,
                 title=post_data.title,
                 content=text_content
             )
         except Exception as e:
             logging.warning(f"Не удалось добавить пост {post_id} в поисковый индекс: {e}")
 
+        # Обновляем счетчики
         await User.update_stats(author_id, post_count_delta=1)
         await Category.update_post_count(post_data.category_id, 1)
 
@@ -381,6 +386,37 @@ class DatabasePopulator:
         except Exception as e:
             logging.warning(f"Не удалось получить статистику векторного индекса: {e}")
 
+    async def _analyze_created_posts(self):
+        """Запускает анализ всех постов, у которых нет анализа."""
+        logging.info("🔬 Запускаем анализ спама для всех созданных постов...")
+
+        # Получаем все посты, которые были созданы в рамках этого скрипта или уже существовали.
+        # Поскольку мы не знаем точно, какие из них новые, просто перебираем все.
+        # В реальной системе это был бы более сложный фоновый процесс.
+        all_post_ids = await db.zrevrange("posts:all", 0, -1)
+
+        analyzed_count = 0
+        skipped_count = 0
+
+        for post_id in all_post_ids:
+            try:
+                # Проверяем, существует ли уже анализ
+                analysis_exists = await db.exists(f"vector_analysis:post:{post_id}")
+                if not analysis_exists:
+                    post = await Post.get_by_id(post_id)
+                    if post:
+                        await vector_classifier.analyze_with_vectors(
+                            post.id, post.title, post.content, post.tags, post.author_id
+                        )
+                        analyzed_count += 1
+                else:
+                    skipped_count += 1
+            except Exception as e:
+                logging.error(f"Ошибка при анализе поста {post_id}: {e}")
+
+        logging.info(f"🔬 Анализ завершен. Проанализировано: {analyzed_count}, пропущено (уже были): {skipped_count}")
+
+
 async def main():
     """Главная функция скрипта"""
     logging.info("🎯 Скрипт заполнения базы данных")
@@ -389,6 +425,7 @@ async def main():
     await populator.populate_all()
     logging.info("=" * 50)
     logging.info("🏁 Скрипт завершен")
+
 
 if __name__ == "__main__":
     try:

@@ -29,11 +29,10 @@ class SpamDetector:
             r'(зарабат|earn).{0,20}[0-9]+',  # заработок + числа
             r'[A-Z]{3,}\s*[A-Z]{3,}',  # много заглавных букв подряд
             r'[!]{3,}',  # много восклицательных знаков
-            r'[\s]{3,}',  # много пробелов
-            r'(.){4,}'  # повторяющиеся символы
+            r'[\s]{3,}'  # много пробелов
         ]
 
-    def calculate_spam_score(self, title: str, content: str, tags: List[str], 
+    def calculate_spam_score(self, title: str, content: str, tags: List[str],
                            author_id: str, user_age_days: int) -> Dict[str, Any]:
         """Рассчитать оценку спама для поста"""
 
@@ -57,7 +56,7 @@ class SpamDetector:
         for pattern in self.suspicious_patterns:
             matches = re.findall(pattern, combined_text, re.IGNORECASE)
             if matches:
-                pattern_count += len(matches) 
+                pattern_count += len(matches)
                 reasons.append(f"Подозрительный паттерн: {pattern}")
 
         if pattern_count > 0:
@@ -83,11 +82,11 @@ class SpamDetector:
             score += 0.2
             reasons.append(f"Слишком много заглавных букв ({capital_ratio:.1%})")
 
-        # 5. Анализ повторяющихся символов
-        repeated_chars = re.findall(r'(.)\1{3,}', combined_text)
+        # 5. Анализ повторяющихся символов (6+ подряд)
+        repeated_chars = re.findall(r'(.)\1{5,}', combined_text)
         if repeated_chars:
-            score += 0.1
-            reasons.append("Найдены повторяющиеся символы")
+            score += 0.15
+            reasons.append("Найдены длинные последовательности повторяющихся символов")
 
         # 6. Анализ возраста пользователя
         if user_age_days < settings.MIN_USER_AGE_DAYS:
