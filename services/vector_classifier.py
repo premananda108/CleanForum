@@ -268,5 +268,14 @@ class VectorSpamClassifier:
                 "error": str(e)
             }
 
+    async def retrain_with_feedback(self, entity_id: str, entity_type: str, is_spam: bool, moderator_id: str):
+        """
+        Record feedback for an entity and potentially trigger retraining.
+        In a real system, this would update the label in the vector DB.
+        """
+        logging.info(f"Feedback received for {entity_type} {entity_id}: is_spam={is_spam} by {moderator_id}")
+        # This is a stub. In a real application, you would update the vector's metadata.
+        pass
+
 # Global classifier instance
 vector_classifier = VectorSpamClassifier()

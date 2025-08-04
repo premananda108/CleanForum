@@ -6,13 +6,13 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 async def drop_redis_index():
-    logging.info(f"Попытка удаления индекса '{settings.VECTOR_INDEX_NAME}'...")
+    logging.info(f"Attempting to drop index '{settings.VECTOR_INDEX_NAME}'...")
     await db.connect()
     try:
         await db.redis_client.execute_command("FT.DROPINDEX", settings.VECTOR_INDEX_NAME)
-        logging.info(f"Индекс '{settings.VECTOR_INDEX_NAME}' успешно удален.")
+        logging.info(f"Index '{settings.VECTOR_INDEX_NAME}' dropped successfully.")
     except Exception as e:
-        logging.warning(f"Не удалось удалить индекс '{settings.VECTOR_INDEX_NAME}'. Возможно, он не существует: {e}")
+        logging.warning(f"Failed to drop index '{settings.VECTOR_INDEX_NAME}'. It might not exist: {e}")
     finally:
         await db.disconnect()
 

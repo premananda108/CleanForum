@@ -126,7 +126,6 @@ class Post:
             await vector_manager.add_vector(
                 doc_id=f"post:{post_id}",
                 vector=post_vector,
-                label=status.value,
                 title=post_data.title,
                 content=text_for_analysis
             )

@@ -19,7 +19,6 @@ class SpamDetector:
             "money": ["earnings", "money", "income", "profit", "income", "money", "earn", "$", "cryptocurrency", "bitcoin"],
             "promotion": ["advertisement", "sale", "discount", "promo", "sale", "discount", "promo", "buy now"],
             "suspicious": ["free", "free", "win", "winner", "congratulations", "urgent", "urgent", "limited time"],
-            "links": ["http://", "https://", "www.", ".com", ".ru", "click here", "click", "link"],
             "scam": ["scam", "fraud", "scam", "fraud", "fake", "phishing"]
         }
 
@@ -27,9 +26,7 @@ class SpamDetector:
         self.suspicious_patterns = [
             r'[0-9]+\s*[$€₽]\s*(in|per\s+day|per\s+month)',  # sums of money
             r'(earn).{0,20}[0-9]+',  # earnings + numbers
-            r'[A-Z]{3,}\s*[A-Z]{3,}',  # many consecutive capital letters
             r'[!]{3,}',  # many exclamation marks
-            r'[\s]{3,}'  # many spaces
         ]
 
     def calculate_spam_score(self, title: str, content: str, tags: List[str],
@@ -82,11 +79,11 @@ class SpamDetector:
             score += 0.2
             reasons.append(f"Too many capital letters ({capital_ratio:.1%})")
 
-        # 5. Analyze repeating characters (6+ in a row)
-        repeated_chars = re.findall(r'(.)\1{5,}', combined_text)
-        if repeated_chars:
-            score += 0.15
-            reasons.append("Found long sequences of repeating characters")
+        # 5. Analyze repeating characters (6+ in a row) - This check is now disabled
+        # repeated_chars = re.findall(r'(.)\1{5,}', combined_text)
+        # if repeated_chars:
+        #     score += 0.15
+        #     reasons.append("Found long sequences of repeating characters")
 
         # 6. Analyze user age
         if user_age_days < settings.MIN_USER_AGE_DAYS:

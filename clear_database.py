@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Скрипт для очистки базы данных Redis
-ВНИМАНИЕ: Удаляет ВСЕ данные из базы!
+Script to clear the Redis database.
+WARNING: Deletes ALL data from the database!
 """
 import asyncio
 import logging
@@ -9,66 +9,66 @@ from models.database import db
 from services.redis_manager import vector_manager
 from config import settings
 
-# Настройка логирования
+# Logging setup
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
 async def clear_database():
-    """Полная очистка базы данных"""
-    logging.warning("🚨 ВНИМАНИЕ: Начинается полная очистка базы данных!")
+    """Complete database cleanup"""
+    logging.warning("🚨 WARNING: Starting a full database cleanup!")
     
-    # Подключаемся к Redis
+    # Connect to Redis
     await db.connect()
     
     try:
-        # Получаем статистику до очистки
+        # Get stats before cleanup
         keys_count = await db.redis_client.dbsize()
-        logging.info(f"📊 Количество ключей в базе до очистки: {keys_count}")
+        logging.info(f"📊 Number of keys in the database before cleanup: {keys_count}")
         
-        # Удаляем векторный индекс
+        # Drop the vector index
         try:
             await db.redis_client.execute_command("FT.DROPINDEX", settings.VECTOR_INDEX_NAME)
-            logging.info("✓ Векторный индекс удален")
+            logging.info("✓ Vector index dropped")
         except Exception as e:
-            logging.info(f"Векторный индекс не найден или уже удален: {e}")
+            logging.info(f"Vector index not found or already deleted: {e}")
         
-        # Очищаем всю базу данных
+        # Clear the entire database
         await db.redis_client.flushdb()
-        logging.info("✓ База данных полностью очищена")
+        logging.info("✓ Database completely cleared")
         
-        # Проверяем результат
+        # Check the result
         keys_count_after = await db.redis_client.dbsize()
-        logging.info(f"📊 Количество ключей в базе после очистки: {keys_count_after}")
+        logging.info(f"📊 Number of keys in the database after cleanup: {keys_count_after}")
         
-        logging.info("✅ Очистка базы данных завершена успешно!")
+        logging.info("✅ Database cleanup completed successfully!")
         
     except Exception as e:
-        logging.error(f"❌ Ошибка при очистке базы данных: {e}", exc_info=True)
+        logging.error(f"❌ Error during database cleanup: {e}", exc_info=True)
     finally:
         await db.disconnect()
 
 async def main():
-    # Запрашиваем подтверждение
-    confirmation = input("Вы уверены, что хотите удалить ВСЕ данные? Введите 'YES' для подтверждения: ")
+    # Request confirmation
+    confirmation = input("Are you sure you want to delete ALL data? Type 'YES' to confirm: ")
 
-    """Главная функция"""
-    logging.info("🗑️  Скрипт очистки базы данных")
+    """Main function"""
+    logging.info("🗑️  Database cleanup script")
     logging.info("=" * 50)
 
     if confirmation == "YES":
         await clear_database()
     else:
-        logging.info("❌ Операция отменена пользователем")
+        logging.info("❌ Operation cancelled by user")
     
     logging.info("=" * 50)
-    logging.info("🏁 Скрипт завершен")
+    logging.info("🏁 Script finished")
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logging.info("❌ Скрипт прерван пользователем")
+        logging.info("❌ Script interrupted by user")
     except Exception as e:
-        logging.error(f"❌ Критическая ошибка: {e}", exc_info=True)
+        logging.error(f"❌ Critical error: {e}", exc_info=True)
