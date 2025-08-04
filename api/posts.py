@@ -35,13 +35,8 @@ async def create_post(
 
     try:
         post_id = await Post.create(post_data, current_user)
-        if post_id is None:
-            logging.warning(f"Пост от {current_user} был отклонен как спам.")
-            raise HTTPException(
-                status_code=422,
-                detail="Ваш пост был определен как спам и не может быть опубликован."
-            )
-        
+        # post_id больше не может быть None, проверка удалена.
+        # Спам-посты теперь сохраняются со статусом 'spam'.
         logging.info(f"Пост {post_id} успешно сохранен в БД.")
 
     except HTTPException as e:

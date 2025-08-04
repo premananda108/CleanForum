@@ -663,11 +663,20 @@ async function initCreatePostPage() {
 
             const newPost = await api.createPost(postData);
 
-            if (newPost.status === 'spam') {
-                showAlert('Ваш пост отправлен на проверку и будет опубликован после одобрения модератором.', 'warning');
-                setTimeout(() => {
-                    window.location.href = '/'; // Перенаправляем на главную
-                }, 3000);
+            if (newPost.is_spam) {
+                // Показываем сообщение о спаме в специальном контейнере
+                const spamContainer = document.getElementById('spam-message-container');
+                if (spamContainer) {
+                    spamContainer.innerHTML = `
+                        <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
+                        <p class="text-yellow-800 font-medium">Ваш пост определен как спам.</p>
+                        <p class="text-yellow-600 text-sm">Он не будет виден другим пользователям, но поможет нам в обучении системы модерации.</p>
+                    `;
+                    spamContainer.classList.remove('hidden');
+                }
+                // Блокируем кнопку отправки и меняем текст
+                submitBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Проверено';
+                // Не перенаправляем пользователя и не показываем стандартный alert
             } else {
                 showAlert('Пост успешно создан! Перенаправление...', 'success');
                 setTimeout(() => {

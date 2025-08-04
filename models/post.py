@@ -62,12 +62,12 @@ class Post:
     async def create(post_data: PostCreate, author_id: str) -> Optional[str]:
         """
         Создать новый пост с немедленным анализом на спам.
-        Если пост определен как спам, он не сохраняется и возвращается None.
+        Если пост определен как спам, он сохраняется со статусом SPAM.
         """
         post_id = str(uuid.uuid4())
         now = datetime.now()
 
-        # Теперь post_data.content это и есть Markdown текст
+        # Markdown контент
         text_for_analysis = post_data.content
 
         # Проводим анализ на спам
@@ -77,21 +77,19 @@ class Post:
         )
 
         is_spam = analysis_results.get("is_spam", False)
+        spam_score = analysis_results.get("spam_score", 0.0)
 
-        # Если пост - спам, не сохраняем его
         if is_spam:
             import logging
-            spam_score = analysis_results.get("spam_score", 0.0)
-            logging.warning(f"Пост от {author_id} определен как СПАМ (score: {spam_score:.2f}) и не будет сохранен.")
-            return None
-
-        spam_score = analysis_results.get("spam_score", 0.0)
-        status = PostStatus.PUBLISHED
+            logging.warning(f"Пост от {author_id} определен как СПАМ (score: {spam_score:.2f}) и будет сохранен со статусом 'spam'.")
+            status = PostStatus.SPAM
+        else:
+            status = PostStatus.PUBLISHED
 
         post_info = {
             "id": post_id,
             "title": post_data.title,
-            "content": text_for_analysis,  # Markdown контент
+            "content": text_for_analysis,
             "category_id": post_data.category_id,
             "author_id": author_id,
             "tags": json.dumps(post_data.tags),
@@ -101,7 +99,7 @@ class Post:
             "view_count": 0,
             "comment_count": 0,
             "vote_score": 0,
-            "is_spam": str(is_spam), # будет всегда False
+            "is_spam": str(is_spam),
             "spam_score": spam_score,
             "reading_time": Post.calculate_reading_time(text_for_analysis)
         }
@@ -122,9 +120,9 @@ class Post:
             # Убедимся, что классификатор инициализирован для создания вектора
             if not vector_classifier.is_initialized:
                 await vector_classifier.initialize()
-            
+
             post_vector = vector_classifier.create_vector(post_data.title, text_for_analysis, post_data.tags)
-            
+
             await vector_manager.add_vector(
                 doc_id=f"post:{post_id}",
                 vector=post_vector,
@@ -250,7 +248,7 @@ class Post:
                 update_fields["is_spam"] = str(False)
                 update_fields["spam_score"] = 0.0
                 update_fields["status"] = PostStatus.PUBLISHED.value
-            
+
             await db.hset(f"post:{post_id}", mapping=update_fields)
 
         return True
@@ -310,7 +308,7 @@ class Post:
         # 4. Удаляем вектор из поискового индекса (вне транзакции)
         from services.redis_manager import vector_manager
         await vector_manager.delete_vector(f"post:{post_id}")
-        
+
         import logging
         logging.info(f"Пост {post_id} был помечен как удаленный.")
 
@@ -468,7 +466,7 @@ class Post:
         for post_id_bytes in all_post_ids:
             post_id = post_id_bytes
             post = await Post.get_by_id(post_id)
-            
+
             if post and post.status == PostStatus.PUBLISHED:
                 try:
                     # Убедимся, что классификатор инициализирован
@@ -476,7 +474,7 @@ class Post:
                         await vector_classifier.initialize()
 
                     post_vector = vector_classifier.create_vector(post.title, post.content, post.tags)
-                    
+
                     # Добавляем в индекс
                     vector_doc_id = f"post:{post.id}"
                     await vector_manager.add_vector(
