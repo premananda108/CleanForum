@@ -1,59 +1,59 @@
 {% extends "base.html" %}
 
-{% block title %}Просмотр поста - CleanForum{% endblock %}
+{% block title %}View Post - CleanForum{% endblock %}
 
 {% block content %}
 <div class="flex flex-wrap -mx-4">
     <div class="w-full lg:w-3/4 px-4">
-        <!-- Контейнер для данных поста -->
+        <!-- Post data container -->
         <div id="post-detail-container" class="bg-white rounded-xl shadow-md p-6 mb-8"></div>
 
-        <!-- Раздел комментариев -->
+        <!-- Comments section -->
         <div class="bg-white rounded-xl shadow-md mb-8">
             <div class="p-4 border-b border-gray-200">
-                <h4 class="text-xl font-semibold text-gray-800"><i class="fas fa-comments text-primary-500"></i> Комментарии</h4>
+                <h4 class="text-xl font-semibold text-gray-800"><i class="fas fa-comments text-primary-500"></i> Comments</h4>
             </div>
             <div class="p-6">
                 <div id="comments-container" class="space-y-6">
-                    <!-- Комментарии будут загружены сюда -->
+                    <!-- Comments will be loaded here -->
                 </div>
             </div>
         </div>
 
-        <!-- Форма добавления комментария -->
+        <!-- Add comment form -->
         <div class="bg-white rounded-xl shadow-md">
             <div class="p-4 border-b border-gray-200">
-                <h5 class="font-semibold text-gray-700">Оставить комментарий</h5>
+                <h5 class="font-semibold text-gray-700">Leave a comment</h5>
             </div>
             <div class="p-6">
                 <form id="add-comment-form">
                     <div class="mb-4">
-                        <textarea class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-primary-500 focus:border-primary-500 transition" id="comment-content" rows="4" required minlength="5" placeholder="Введите ваш комментарий..."></textarea>
+                        <textarea class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-lg focus:ring-primary-500 focus:border-primary-500 transition" id="comment-content" rows="4" required minlength="5" placeholder="Enter your comment..."></textarea>
                     </div>
                     <button type="submit" class="inline-flex items-center px-6 py-2 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-primary-600 hover:bg-primary-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500 transition-all duration-300">
-                        Отправить
+                        Submit
                     </button>
                 </form>
             </div>
         </div>
     </div>
     <div class="w-full lg:w-1/4 px-4">
-        <!-- Боковая панель -->
+        <!-- Sidebar -->
         <div class="space-y-8">
             <div class="bg-white rounded-xl shadow-md overflow-hidden">
                 <div class="p-4 bg-gray-50 border-b border-gray-200">
-                    <h5 class="font-semibold text-gray-700">Информация</h5>
+                    <h5 class="font-semibold text-gray-700">Information</h5>
                 </div>
                 <div class="p-4" id="post-meta-container">
-                    <!-- Мета-информация о посте -->
+                    <!-- Post meta-information -->
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow-md overflow-hidden">
                 <div class="p-4 bg-gray-50 border-b border-gray-200">
-                    <h5 class="font-semibold text-gray-700"><i class="fas fa-clone text-primary-500 mr-2"></i>Похожие посты</h5>
+                    <h5 class="font-semibold text-gray-700"><i class="fas fa-clone text-primary-500 mr-2"></i>Similar Posts</h5>
                 </div>
                 <div class="p-4" id="similar-posts-container">
-                    <!-- Похожие посты будут загружены сюда -->
+                    <!-- Similar posts will be loaded here -->
                 </div>
             </div>
         </div>

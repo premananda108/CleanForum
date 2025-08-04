@@ -1,5 +1,5 @@
 """
-Менеджер базы данных Redis
+Redis Database Manager
 """
 import redis.asyncio as redis
 import json
@@ -13,7 +13,7 @@ class RedisDatabase:
         self.redis_client: Optional[redis.Redis] = None
 
     async def connect(self):
-        """Подключение к Redis"""
+        """Connect to Redis"""
         self.redis_client = redis.Redis(
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
@@ -23,93 +23,93 @@ class RedisDatabase:
             decode_responses=True
         )
 
-        # Тестируем подключение
+        # Test the connection
         await self.redis_client.ping()
-        logging.info(f"Подключен к Redis {settings.REDIS_HOST}:{settings.REDIS_PORT}")
+        logging.info(f"Connected to Redis at {settings.REDIS_HOST}:{settings.REDIS_PORT}")
 
     async def disconnect(self):
-        """Отключение от Redis"""
+        """Disconnect from Redis"""
         if self.redis_client:
             await self.redis_client.aclose()
-            logging.info("Отключен от Redis.")
+            logging.info("Disconnected from Redis.")
 
     async def get(self, key: str) -> Optional[str]:
-        """Получить значение по ключу"""
+        """Get a value by key"""
         return await self.redis_client.get(key)
 
     async def set(self, key: str, value: str, ex: Optional[int] = None) -> bool:
-        """Установить значение по ключу"""
+        """Set a value by key"""
         return await self.redis_client.set(key, value, ex=ex)
 
     async def hget(self, key: str, field: str) -> Optional[str]:
-        """Получить поле из хеша"""
+        """Get a field from a hash"""
         return await self.redis_client.hget(key, field)
 
     async def hset(self, key: str, mapping: Dict[str, Any]) -> int:
-        """Установить поля в хеше"""
-        # Конвертируем все значения в строки
+        """Set fields in a hash"""
+        # Convert all values to strings
         str_mapping = {k: json.dumps(v) if isinstance(v, (dict, list)) else str(v) 
                       for k, v in mapping.items()}
         return await self.redis_client.hset(key, mapping=str_mapping)
 
     async def hgetall(self, key: str) -> Dict[str, str]:
-        """Получить все поля хеша"""
+        """Get all fields of a hash"""
         return await self.redis_client.hgetall(key)
 
     async def hincrby(self, key: str, field: str, amount: int = 1) -> int:
-        """Увеличить значение поля в хеше"""
+        """Increment the value of a field in a hash"""
         return await self.redis_client.hincrby(key, field, amount)
 
     async def delete(self, *keys: str) -> int:
-        """Удалить ключи"""
+        """Delete keys"""
         return await self.redis_client.delete(*keys)
 
     async def exists(self, key: str) -> bool:
-        """Проверить существование ключа"""
+        """Check if a key exists"""
         return bool(await self.redis_client.exists(key))
 
     async def incr(self, key: str) -> int:
-        """Увеличить счетчик"""
+        """Increment a counter"""
         return await self.redis_client.incr(key)
 
     async def zadd(self, key: str, mapping: Dict[str, float]) -> int:
-        """Добавить в отсортированное множество"""
+        """Add to a sorted set"""
         return await self.redis_client.zadd(key, mapping)
 
     async def zrange(self, key: str, start: int = 0, end: int = -1, 
                       withscores: bool = False) -> List:
-        """Получить элементы из отсортированного множества (по возрастанию)"""
+        """Get elements from a sorted set (ascending)"""
         return await self.redis_client.zrange(key, start, end, withscores=withscores)
 
     async def zrevrange(self, key: str, start: int = 0, end: int = -1, 
                        withscores: bool = False) -> List:
-        """Получить элементы из отсортированного множества (по убыванию)"""
+        """Get elements from a sorted set (descending)"""
         return await self.redis_client.zrevrange(key, start, end, withscores=withscores)
 
     async def zcard(self, key: str) -> int:
-        """Получить количество элементов в отсортированном множестве."""
+        """Get the number of elements in a sorted set."""
         return await self.redis_client.zcard(key)
 
     async def get_server_info(self) -> Dict[str, Any]:
-        """Получить информацию о сервере Redis"""
+        """Get Redis server information"""
         return await self.redis_client.info()
 
     async def scard(self, key: str) -> int:
-        """Получить количество элементов в множестве"""
+        """Get the number of elements in a set"""
         return await self.redis_client.scard(key)
 
     async def sadd(self, key: str, *values: str) -> int:
-        """Добавить элементы в множество"""
+        """Add elements to a set"""
         return await self.redis_client.sadd(key, *values)
 
     async def srem(self, key: str, *values: str) -> int:
-        """Удалить элементы из множества"""
+        """Remove elements from a set"""
         return await self.redis_client.srem(key, *values)
 
     async def flush_db(self):
-        """Очистить текущую базу данных"""
+        """Clear the current database"""
         if self.redis_client:
             await self.redis_client.flushdb()
 
-# Глобальный экземпляр базы данных
+# Global database instance
 db = RedisDatabase()

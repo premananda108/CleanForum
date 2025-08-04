@@ -5,7 +5,7 @@ from models.user import User, UserCreate
 from models.database import db
 from config import settings
 
-# Фикстура для управления циклом событий asyncio
+# Fixture to manage the asyncio event loop
 @pytest.fixture(scope="session")
 def event_loop():
     try:
@@ -15,40 +15,40 @@ def event_loop():
     yield loop
     loop.close()
 
-# Фикстура для управления базой данных
+# Fixture to manage the database
 @pytest_asyncio.fixture(scope="function", autouse=True)
 async def database(monkeypatch):
-    # Принудительно устанавливаем тестовые настройки
+    # Force test settings
     monkeypatch.setattr(settings, 'TESTING', True)
     monkeypatch.setattr(settings, 'REDIS_PORT', 6380)
 
-    # Подключаемся к БД перед каждым тестом
+    # Connect to the DB before each test
     await db.connect()
-    # Очищаем БД перед каждым тестом
+    # Clear the DB before each test
     await db.flush_db()
     yield
-    # Отключаемся от БД после каждого теста
+    # Disconnect from the DB after each test
     await db.disconnect()
 
 @pytest.mark.asyncio
 async def test_create_user():
-    """Тест создания нового пользователя"""
+    """Test creating a new user"""
     user_data = UserCreate(
         username="testuser",
         email="test@example.com",
         password="password123"
     )
     
-    # Создаем пользователя
+    # Create the user
     user_id = await User.create(user_data)
     
-    # Проверяем, что пользователь был создан
+    # Check that the user was created
     assert user_id is not None
     
-    # Получаем пользователя по ID
+    # Get the user by ID
     created_user = await User.get_by_id(user_id)
     
-    # Проверяем данные пользователя
+    # Check the user's data
     assert created_user is not None
     assert created_user.username == user_data.username
     assert created_user.email == user_data.email

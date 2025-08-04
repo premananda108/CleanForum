@@ -1,146 +1,146 @@
-# 🧪 Примеры API запросов для тестирования
+# 🧪 API Request Examples for Testing
 
-После заполнения базы данных с помощью `populate_database.py`, вы можете протестировать API с помощью этих запросов.
+After populating the database using `populate_database.py`, you can test the API with these requests.
 
-## 📋 Предварительные условия
+## 📋 Prerequisites
 
-1. Запустите сервер:
+1. Start the server:
    ```bash
    python main.py
    ```
 
-2. Сервер будет доступен по адресу: `http://localhost:8000`
+2. The server will be available at: `http://localhost:8000`
 
-## 🔍 Основные API запросы
+## 🔍 Basic API Requests
 
-### 1. Получить список всех постов
+### 1. Get a list of all posts
 ```bash
 curl -X GET "http://localhost:8000/api/posts?limit=10&offset=0"
 ```
 
-### 2. Получить посты определенной категории
+### 2. Get posts of a specific category
 ```bash
-# Сначала получите ID категории из списка категорий
+# First, get the category ID from the list of categories
 curl -X GET "http://localhost:8000/api/categories"
 
-# Затем запросите посты категории (замените CATEGORY_ID)
+# Then, request posts of the category (replace CATEGORY_ID)
 curl -X GET "http://localhost:8000/api/posts?category_id=CATEGORY_ID&limit=5"
 ```
 
-### 3. Получить конкретный пост
+### 3. Get a specific post
 ```bash
-# Замените POST_ID на реальный ID поста из списка
+# Replace POST_ID with a real post ID from the list
 curl -X GET "http://localhost:8000/api/posts/POST_ID"
 ```
 
-### 4. Поиск постов
+### 4. Search for posts
 ```bash
-# Поиск по ключевому слову
-curl -X GET "http://localhost:8000/api/search?q=заработок&limit=5"
+# Search by keyword
+curl -X GET "http://localhost:8000/api/search?q=earnings&limit=5"
 
-# Векторный поиск похожих постов
+# Vector search for similar posts
 curl -X POST "http://localhost:8000/api/search/similar" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Как заработать деньги",
-    "content": "Хочу найти способы заработка в интернете",
-    "tags": ["деньги", "заработок"]
+    "title": "How to make money",
+    "content": "I want to find ways to make money online",
+    "tags": ["money", "earnings"]
   }'
 ```
 
-### 5. Получить категории
+### 5. Get categories
 ```bash
 curl -X GET "http://localhost:8000/api/categories"
 ```
 
-### 6. Создать новый пост
+### 6. Create a new post
 ```bash
 curl -X POST "http://localhost:8000/api/posts" \
   -H "Content-Type: application/json" \
   -d '{
-    "title": "Тестовый пост",
-    "content": "Это содержимое тестового поста для проверки API",
+    "title": "Test Post",
+    "content": "This is the content of the test post for API checking",
     "category_id": "CATEGORY_ID",
-    "tags": ["тест", "api"]
+    "tags": ["test", "api"]
   }'
 ```
 
-### 7. Панель модератора
+### 7. Moderator Panel
 ```bash
-# Получить все посты для модерации (включая спам)
+# Get all posts for moderation (including spam)
 curl -X GET "http://localhost:8000/api/moderator/posts?limit=20"
 
-# Получить статистику спама
+# Get spam statistics
 curl -X GET "http://localhost:8000/api/moderator/spam-stats"
 
-# Получить информацию о векторном классификаторе
+# Get information about the vector classifier
 curl -X GET "http://localhost:8000/api/moderator/classifier-stats"
 ```
 
-### 8. Анализ спама для поста
+### 8. Spam analysis for a post
 ```bash
-# Получить результаты анализа спама (замените POST_ID)
+# Get spam analysis results (replace POST_ID)
 curl -X GET "http://localhost:8000/api/posts/POST_ID/spam-analysis"
 ```
 
-## 🌐 Веб-интерфейс
+## 🌐 Web Interface
 
-Также доступны HTML страницы:
+HTML pages are also available:
 
-- **Главная страница:** http://localhost:8000/
-- **Создание поста:** http://localhost:8000/create
-- **Панель модератора:** http://localhost:8000/moderator
-- **Поиск:** http://localhost:8000/search
-- **Категория:** http://localhost:8000/category/CATEGORY_ID
-- **Страница поста:** http://localhost:8000/posts/POST_ID
+- **Main page:** http://localhost:8000/
+- **Create post:** http://localhost:8000/create
+- **Moderator panel:** http://localhost:8000/moderator
+- **Search:** http://localhost:8000/search
+- **Category:** http://localhost:8000/category/CATEGORY_ID
+- **Post page:** http://localhost:8000/posts/POST_ID
 
-## 📊 Полезные запросы для отладки
+## 📊 Useful Debugging Queries
 
-### Проверка здоровья приложения
+### Health check
 ```bash
 curl -X GET "http://localhost:8000/health"
 ```
 
-### Получение логов приложения
+### Get application logs
 ```bash
 curl -X GET "http://localhost:8000/api/logs"
 ```
 
-### API документация (Swagger)
-Откройте в браузере: http://localhost:8000/docs
+### API documentation (Swagger)
+Open in browser: http://localhost:8000/docs
 
-## 🧪 Сценарии тестирования
+## 🧪 Test Scenarios
 
-### Сценарий 1: Проверка фильтрации спама
-1. Получите список всех постов
-2. Обратите внимание на посты со статусом "spam"
-3. Попробуйте создать новый пост с подозрительным содержанием
-4. Проверьте, как система определяет спам
+### Scenario 1: Spam filtering check
+1. Get a list of all posts
+2. Pay attention to posts with the status "spam"
+3. Try to create a new post with suspicious content
+4. Check how the system detects spam
 
-### Сценарий 2: Тестирование поиска
-1. Выполните текстовый поиск по слову "заработок"
-2. Попробуйте векторный поиск с похожим содержанием
-3. Сравните результаты обычного и векторного поиска
+### Scenario 2: Search testing
+1. Perform a text search for the word "earnings"
+2. Try a vector search with similar content
+3. Compare the results of regular and vector search
 
-### Сценарий 3: Работа модератора
-1. Откройте панель модератора
-2. Просмотрите все посты, включая спам
-3. Проверьте статистику классификации
+### Scenario 3: Moderator actions
+1. Open the moderator panel
+2. View all posts, including spam
+3. Check the classification statistics
 
-## 🔧 Примеры ответов API
+## 🔧 API Response Examples
 
-### Успешный ответ получения постов:
+### Successful response for getting posts:
 ```json
 [
   {
     "id": "uuid-string",
-    "title": "Название поста",
-    "content": "Содержание поста...",
+    "title": "Post Title",
+    "content": "Post content...",
     "category_id": "category-uuid",
-    "category_name": "Технологии",
+    "category_name": "Technology",
     "author_id": "user-uuid",
     "author_username": "alice_blogger",
-    "tags": ["тег1", "тег2"],
+    "tags": ["tag1", "tag2"],
     "status": "published",
     "created_at": "2024-01-15T10:30:00",
     "updated_at": "2024-01-15T10:30:00",
@@ -154,47 +154,47 @@ curl -X GET "http://localhost:8000/api/logs"
 ]
 ```
 
-### Ответ при создании спам-поста:
+### Response when creating a spam post:
 ```json
 {
-  "detail": "Ваш пост был определен как спам и не может быть опубликован."
+  "detail": "Your post has been identified as spam and cannot be published."
 }
 ```
 
-## 🚨 Обработка ошибок
+## 🚨 Error Handling
 
-### 404 - Пост не найден
+### 404 - Post not found
 ```json
 {
-  "detail": "Пост не найден"
+  "detail": "Post not found"
 }
 ```
 
-### 422 - Спам обнаружен
+### 422 - Spam detected
 ```json
 {
-  "detail": "Ваш пост был определен как спам и не может быть опубликован."
+  "detail": "Your post has been identified as spam and cannot be published."
 }
 ```
 
-### 500 - Внутренняя ошибка сервера
+### 500 - Internal server error
 ```json
 {
-  "detail": "Внутренняя ошибка при создании поста"
+  "detail": "Internal error creating post"
 }
 ```
 
-## 📝 Дополнительные инструменты
+## 📝 Additional Tools
 
-### HTTPie (альтернатива curl)
+### HTTPie (alternative to curl)
 ```bash
-# Установка
+# Installation
 pip install httpie
 
-# Примеры использования
+# Usage examples
 http GET localhost:8000/api/posts
-http POST localhost:8000/api/posts title="Тест" content="Содержание" category_id="CATEGORY_ID" tags:='["тест"]'
+http POST localhost:8000/api/posts title="Test" content="Content" category_id="CATEGORY_ID" tags:='["test"]'
 ```
 
 ### Postman Collection
-Импортируйте URL `http://localhost:8000/docs` в Postman для автоматического создания коллекции запросов.
+Import the URL `http://localhost:8000/docs` into Postman to automatically create a collection of requests.

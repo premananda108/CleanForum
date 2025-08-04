@@ -1,4 +1,4 @@
-// CleanForum - JavaScript для панели модератора
+// CleanForum - JavaScript for the moderator panel
 
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
@@ -9,13 +9,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
 function getSpamBadge(isSpam, spamScore) {
     if (isSpam) {
-        return '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">СПАМ</span>';
+        return '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">SPAM</span>';
     } else if (spamScore > 0.5) {
-        return '<span class="px-2 py-1 text-xs font-semibold text-black bg-yellow-400 rounded-full">Подозрительно</span>';
+        return '<span class="px-2 py-1 text-xs font-semibold text-black bg-yellow-400 rounded-full">Suspicious</span>';
     } else if (spamScore > 0.3) {
-        return '<span class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-full">Проверено</span>';
+        return '<span class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-full">Verified</span>';
     }
-    return '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full">Чисто</span>';
+    return '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full">Clean</span>';
 }
 
 async function loadModeratorData() {
@@ -38,24 +38,24 @@ async function loadStats() {
         `;
 
         contentContainer.innerHTML = `
-            ${statItem('Всего постов', stats.total_posts, 'bg-blue-500')}
-            ${statItem('Опубликованных', stats.published_posts, 'bg-green-500')}
-            ${statItem('В спаме', stats.spam_posts, 'bg-red-500')}
-            ${statItem('Процент спама', `${stats.spam_percentage}%`, 'bg-yellow-500')}
+            ${statItem('Total Posts', stats.total_posts, 'bg-blue-500')}
+            ${statItem('Published', stats.published_posts, 'bg-green-500')}
+            ${statItem('In Spam', stats.spam_posts, 'bg-red-500')}
+            ${statItem('Spam Percentage', `${stats.spam_percentage}%`, 'bg-yellow-500')}
         `;
 
         systemContainer.innerHTML = `
-            ${statItem('Версия Redis', stats.redis_version, 'bg-gray-600')}
-            ${statItem('Используемая память', stats.used_memory, 'bg-blue-400')}
-            ${statItem('Количество векторов', stats.vector_count, 'bg-green-400')}
-            ${statItem('Версия Python', stats.python_version, 'bg-gray-800')}
-            ${statItem('Версия FastAPI', stats.fastapi_version, 'bg-gray-800')}
-            ${statItem('Версия приложения', stats.app_version, 'bg-gray-800')}
+            ${statItem('Redis Version', stats.redis_version, 'bg-gray-600')}
+            ${statItem('Used Memory', stats.used_memory, 'bg-blue-400')}
+            ${statItem('Vector Count', stats.vector_count, 'bg-green-400')}
+            ${statItem('Python Version', stats.python_version, 'bg-gray-800')}
+            ${statItem('FastAPI Version', stats.fastapi_version, 'bg-gray-800')}
+            ${statItem('App Version', stats.app_version, 'bg-gray-800')}
         `;
 
     } catch (error) {
         console.error('Error loading stats:', error);
-        const errorHtml = '<div class="p-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">Ошибка загрузки статистики.</div>';
+        const errorHtml = '<div class="p-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">Error loading statistics.</div>';
         document.getElementById('content-stats').innerHTML = errorHtml;
         document.getElementById('system-stats').innerHTML = errorHtml;
     }
@@ -67,7 +67,7 @@ async function loadModeratorPosts() {
         const container = document.getElementById('pending-posts');
 
         if (posts.length === 0) {
-            container.innerHTML = '<p class="text-green-600 font-medium">Нет постов для модерации</p>';
+            container.innerHTML = '<p class="text-green-600 font-medium">No posts for moderation</p>';
             return;
         }
 
@@ -81,7 +81,7 @@ async function loadModeratorPosts() {
                         <p class="text-sm text-gray-600 mt-1">${post.content.substring(0, 100)}...</p>
                         <div class="mt-3 flex items-center space-x-2">
                             ${getSpamBadge(post.is_spam, post.spam_score)}
-                            <span class="text-xs text-gray-500">Оценка: <strong>${(post.spam_score * 100).toFixed(1)}%</strong></span>
+                            <span class="text-xs text-gray-500">Score: <strong>${(post.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2 ml-4">
@@ -114,21 +114,21 @@ async function moderatePost(postId, action) {
         await loadModeratorPosts();
     } catch (error) {
         console.error('Error moderating post:', error);
-        showAlert('Ошибка модерации поста', 'danger');
+        showAlert('Error moderating post', 'danger');
     }
 }
 
 async function deletePost(postId) {
-    if (!confirm('Вы уверены, что хотите удалить этот пост?')) {
+    if (!confirm('Are you sure you want to delete this post?')) {
         return;
     }
     try {
         await api.deletePost(postId);
-        showAlert('Пост успешно удален', 'success');
+        showAlert('Post deleted successfully', 'success');
         await loadModeratorPosts();
     } catch (error) {
         console.error('Error deleting post:', error);
-        showAlert('Ошибка удаления поста', 'danger');
+        showAlert('Error deleting post', 'danger');
     }
 }
 
@@ -138,7 +138,7 @@ async function showPostSpamAnalysis(postId) {
         displaySpamAnalysis(analysis);
     } catch (error) {
         console.error('Error loading post spam analysis:', error);
-        showAlert('Ошибка загрузки анализа поста', 'danger');
+        showAlert('Error loading post analysis', 'danger');
     }
 }
 
@@ -147,7 +147,7 @@ async function loadModeratorComments() {
         const comments = await api.getPendingComments();
         const container = document.getElementById('pending-comments');
         if (comments.length === 0) {
-            container.innerHTML = '<p class="text-green-600 font-medium">Нет комментариев для модерации</p>';
+            container.innerHTML = '<p class="text-green-600 font-medium">No comments for moderation</p>';
             return;
         }
         container.innerHTML = comments.map(comment => `
@@ -161,7 +161,7 @@ async function loadModeratorComments() {
                         </p>
                         <div class="mt-3 flex items-center space-x-2">
                             ${getSpamBadge(comment.is_spam, comment.spam_score)}
-                            <span class="text-xs text-gray-500">Оценка: <strong>${(comment.spam_score * 100).toFixed(1)}%</strong></span>
+                            <span class="text-xs text-gray-500">Score: <strong>${(comment.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>
                     <div class="flex flex-col space-y-2 ml-4">
@@ -174,7 +174,7 @@ async function loadModeratorComments() {
         `).join('');
     } catch (error) {
         console.error('Error loading pending comments:', error);
-        document.getElementById('pending-comments').innerHTML = '<p class="text-red-600">Ошибка загрузки комментариев.</p>';
+        document.getElementById('pending-comments').innerHTML = '<p class="text-red-600">Error loading comments.</p>';
     }
 }
 
@@ -185,7 +185,7 @@ async function moderateComment(commentId, action) {
         await loadModeratorComments();
     } catch (error) {
         console.error('Error moderating comment:', error);
-        showAlert('Ошибка модерации комментария', 'danger');
+        showAlert('Error moderating comment', 'danger');
     }
 }
 
@@ -195,7 +195,7 @@ async function showCommentSpamAnalysis(commentId) {
         displaySpamAnalysis(analysis);
     } catch (error) {
         console.error('Error loading comment spam analysis:', error);
-        showAlert('Ошибка загрузки анализа комментария', 'danger');
+        showAlert('Error loading comment analysis', 'danger');
     }
 }
 
@@ -206,13 +206,13 @@ function displaySpamAnalysis(analysis) {
     if (analysis.neighbors && analysis.neighbors.length > 0) {
         neighborsHtml = `
             <div class="mt-6 border-t pt-4">
-                <h6 class="font-bold text-gray-700 mb-2">Похожие элементы (влияющие на оценку):</h6>
+                <h6 class="font-bold text-gray-700 mb-2">Similar items (influencing the score):</h6>
                 <div class="space-y-2">
                     ${analysis.neighbors.map(neighbor => `
                         <div class="p-2 bg-gray-100 rounded-lg text-sm">
-                            <a href="/posts/${neighbor.id}" target="_blank" class="text-blue-600 hover:underline">${neighbor.title || 'Комментарий без заголовка'}</a>
+                            <a href="/posts/${neighbor.id}" target="_blank" class="text-blue-600 hover:underline">${neighbor.title || 'Comment without a title'}</a>
                             <div class="flex items-center justify-between mt-1">
-                                <!-- Используем getSpamBadge для консистентности -->
+                                <!-- Use getSpamBadge for consistency -->
                                 ${getSpamBadge(neighbor.is_spam, neighbor.spam_score)}
                             </div>
                         </div>
@@ -225,21 +225,21 @@ function displaySpamAnalysis(analysis) {
     content.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div class="bg-gray-50 p-4 rounded-lg">
-                <h6 class="font-bold text-gray-700 mb-2">Общая оценка</h6>
-                <p class="text-gray-600">Оценка спама: <strong class="text-lg text-gray-900">${(analysis.spam_score * 100).toFixed(1)}%</strong></p>
-                <div class="mt-2">Статус: ${getSpamBadge(analysis.is_spam, analysis.spam_score)}</div>
+                <h6 class="font-bold text-gray-700 mb-2">Overall Score</h6>
+                <p class="text-gray-600">Spam score: <strong class="text-lg text-gray-900">${(analysis.spam_score * 100).toFixed(1)}%</strong></p>
+                <div class="mt-2">Status: ${getSpamBadge(analysis.is_spam, analysis.spam_score)}</div>
             </div>
             <div class="bg-gray-50 p-4 rounded-lg">
-                <h6 class="font-bold text-gray-700 mb-2">Детали анализа</h6>
-                <p class="text-sm text-gray-600">Эвристика: <span class="font-semibold">${(analysis.heuristic_score * 100).toFixed(1)}%</span></p>
-                <p class="text-sm text-gray-600">Векторный: <span class="font-semibold">${(analysis.vector_score * 100).toFixed(1)}%</span> (Предсказание: ${analysis.vector_prediction})</p>
-                <p class="text-sm text-gray-600">Уверенность вектора: <span class="font-semibold">${(analysis.vector_confidence * 100).toFixed(1)}%</span></p>
+                <h6 class="font-bold text-gray-700 mb-2">Analysis Details</h6>
+                <p class="text-sm text-gray-600">Heuristic: <span class="font-semibold">${(analysis.heuristic_score * 100).toFixed(1)}%</span></p>
+                <p class="text-sm text-gray-600">Vector: <span class="font-semibold">${(analysis.vector_score * 100).toFixed(1)}%</span> (Prediction: ${analysis.vector_prediction})</p>
+                <p class="text-sm text-gray-600">Vector confidence: <span class="font-semibold">${(analysis.vector_confidence * 100).toFixed(1)}%</span></p>
             </div>
         </div>
         <div class="mt-6">
-            <h6 class="font-bold text-gray-700 mb-2">Причины подозрения:</h6>
+            <h6 class="font-bold text-gray-700 mb-2">Reasons for suspicion:</h6>
             <ul class="list-disc list-inside space-y-1 text-gray-600">
-                ${analysis.reasons.map(reason => `<li>${reason}</li>`).join('') || '<li>Причин не найдено</li>'}
+                ${analysis.reasons.map(reason => `<li>${reason}</li>`).join('') || '<li>No reasons found</li>'}
             </ul>
         </div>
         ${neighborsHtml}
@@ -253,7 +253,7 @@ async function analyzeAllPosts() {
         showAlert(result.message, 'info');
     } catch (error) {
         console.error('Error analyzing all posts:', error);
-        showAlert('Ошибка запуска анализа', 'danger');
+        showAlert('Error starting analysis', 'danger');
     }
 }
 
@@ -263,7 +263,7 @@ async function retrainModel() {
         showAlert(result.message, 'info');
     } catch (error) {
         console.error('Error retraining model:', error);
-        showAlert('Ошибка запуска переобучения', 'danger');
+        showAlert('Error starting retraining', 'danger');
     }
 }
 
@@ -275,6 +275,6 @@ async function showLogs() {
         showModal('logsModal');
     } catch (error) {
         console.error('Error loading logs:', error);
-        showAlert('Ошибка загрузки логов', 'danger');
+        showAlert('Error loading logs', 'danger');
     }
 }

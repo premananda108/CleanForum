@@ -1,56 +1,56 @@
-# Система определения спама в CleanForum
+# Spam Detection System in CleanForum
 
-Система в CleanForum — гибридная. Она использует два основных метода для оценки каждого нового поста:
+The system in CleanForum is a hybrid one. It uses two main methods to evaluate each new post:
 
-1.  **Эвристический анализ**: Набор правил для быстрого выявления очевидного спама.
-2.  **Векторный классификатор**: Машинное обучение для поиска семантически похожего спама.
+1.  **Heuristic Analysis**: A set of rules to quickly identify obvious spam.
+2.  **Vector Classifier**: Machine learning to find semantically similar spam.
 
-Вот как это работает шаг за шагом:
+Here's how it works step by step:
 
-### Шаг 1: Создание поста и вызов детектора
+### Step 1: Post Creation and Detector Invocation
 
-Когда пользователь создает новый пост, API-эндпоинт в `api/posts.py` принимает данные и **перед сохранением** передает их в `SpamDetector`.
+When a user creates a new post, the API endpoint in `api/posts.py` receives the data and passes it to the `SpamDetector` **before saving**.
 
-### Шаг 2: Эвристический анализ
+### Step 2: Heuristic Analysis
 
-`SpamDetector` в `services/spam_detector.py` первым делом проводит эвристический анализ. Это набор простых и быстрых проверок контента, таких как:
+The `SpamDetector` in `services/spam_detector.py` first performs a heuristic analysis. This is a set of simple and fast content checks, such as:
 
-*   **Количество ссылок**: Слишком много ссылок в посте — подозрительно.
-*   **Стоп-слова**: Наличие типичных спам-слов ("казино", "бесплатно", "заработок").
-*   **Длина сообщения**: Слишком короткие или слишком длинные посты могут быть спамом.
-*   **Верхний регистр**: Большое количество слов в CAPS LOCK.
+*   **Number of links**: Too many links in a post is suspicious.
+*   **Stop words**: Presence of typical spam words ("casino", "free", "earnings").
+*   **Message length**: Posts that are too short or too long can be spam.
+*   **Uppercase**: A large number of words in CAPS LOCK.
 
-Каждое правило добавляет "очки" к эвристической оценке (`heuristic_score`).
+Each rule adds "points" to the `heuristic_score`.
 
-### Шаг 3: Векторный классификатор
+### Step 3: Vector Classifier
 
-Параллельно с эвристикой `SpamDetector` обращается к `VectorClassifier` в `services/vector_classifier.py`. Этот компонент — сердце системы:
+In parallel with heuristics, the `SpamDetector` calls the `VectorClassifier` in `services/vector_classifier.py`. This component is the heart of the system:
 
-1.  **Создание вектора**: Текст поста преобразуется в числовой вектор (эмбеддинг) с помощью модели `SentenceTransformer`. Этот вектор представляет семантический смысл текста.
-2.  **Поиск в Redis**: Система выполняет поиск по векторам в Redis (`FT.SEARCH`). Она ищет в индексе `posts:vector_idx` посты, векторы которых наиболее близки к вектору нового поста.
-3.  **Оценка схожести**: Если найдены очень похожие посты, которые ранее были помечены как спам, `vector_score` нового поста повышается.
+1.  **Vector Creation**: The post's text is converted into a numerical vector (embedding) using the `SentenceTransformer` model. This vector represents the semantic meaning of the text.
+2.  **Search in Redis**: The system performs a vector search in Redis (`FT.SEARCH`). It searches the `posts:vector_idx` index for posts whose vectors are closest to the new post's vector.
+3.  **Similarity Score**: If very similar posts are found that were previously marked as spam, the new post's `vector_score` is increased.
 
-### Шаг 4: Принятие решения
+### Step 4: Decision Making
 
-`SpamDetector` объединяет `heuristic_score` и `vector_score` в итоговую оценку `spam_score`. В зависимости от этой оценки, пост получает один из статусов:
+The `SpamDetector` combines the `heuristic_score` and `vector_score` into a final `spam_score`. Depending on this score, the post receives one of the following statuses:
 
-*   **Низкая оценка (`< 0.3`)**: Пост считается "чистым" и сразу **публикуется**.
-*   **Средняя оценка (`0.3 - 0.7`)**: Пост подозрителен и отправляется на **ручную модерацию**. Он не виден обычным пользователям.
-*   **Высокая оценка (`> 0.7`)**: Пост почти наверняка является спамом и сразу **блокируется**.
+*   **Low score (`< 0.3`)**: The post is considered "clean" and is immediately **published**.
+*   **Medium score (`0.3 - 0.7`)**: The post is suspicious and is sent for **manual moderation**. It is not visible to regular users.
+*   **High score (`> 0.7`)**: The post is almost certainly spam and is immediately **blocked**.
 
-Результат анализа, включая причины и оценки, сохраняется в `post.analysis_details`.
+The analysis result, including the reasons and scores, is saved in `post.analysis_details`.
 
-### Шаг 5: Обратная связь и обучение
+### Step 5: Feedback and Learning
 
-Это ключевой этап, который делает систему умнее.
+This is a key stage that makes the system smarter.
 
-*   **Модерация**: Когда модератор в `moderator_panel.html` одобряет или отклоняет пост, его решение записывается. Одобренный пост становится "эталоном хорошего контента", а помеченный как спам — "эталоном спама".
-*   **Переобучение**: Со временем, когда накапливается достаточно данных от модераторов, можно запустить процесс переобучения (`/api/moderator/retrain`). Этот процесс может дообучить векторную модель на новых данных, улучшая ее точность. Исходные данные для обучения лежат в `spam_dataset.json`.
+*   **Moderation**: When a moderator in `moderator_panel.html` approves or rejects a post, their decision is recorded. An approved post becomes a "benchmark for good content," and one marked as spam becomes a "benchmark for spam."
+*   **Retraining**: Over time, when enough data from moderators has been accumulated, the retraining process can be started (`/api/moderator/retrain`). This process can further train the vector model on new data, improving its accuracy. The source data for training is in `spam_dataset.json`.
 
-### Ключевые файлы для изучения:
+### Key Files to Study:
 
-*   `services/spam_detector.py`: Главный оркестратор, который объединяет все проверки.
-*   `services/vector_classifier.py`: Логика векторного анализа и взаимодействия с Redis.
-*   `api/posts.py`: Место, где вызывается детектор при создании поста.
-*   `api/moderator.py`: Логика обработки решений модераторов, которая используется для обратной связи.
-*   `models/post.py`: Модель данных, где хранятся поля `is_spam`, `spam_score` и `status`.
+*   `services/spam_detector.py`: The main orchestrator that combines all checks.
+*   `services/vector_classifier.py`: The logic for vector analysis and interaction with Redis.
+*   `api/posts.py`: The place where the detector is called when a post is created.
+*   `api/moderator.py`: The logic for processing moderator decisions, which is used for feedback.
+*   `models/post.py`: The data model where the `is_spam`, `spam_score`, and `status` fields are stored.

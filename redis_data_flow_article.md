@@ -24,12 +24,12 @@ This hash stores everything needed to display and interact with a post. It is th
 
 -   **Key**: `post:<uuid>`
 -   **Schema**:
-    | Поле | Тип Данных | Описание |
+    | Field | Data Type | Description |
     |---|---|---|
-    | `id` | `string` | UUID поста. |
-    | `title` | `string` | Полный заголовок поста. |
-    | `content` | `string` | Чистый текст поста. |
-    | `is_spam` | `string` | `"True"` или `"False"`. |
+    | `id` | `string` | Post UUID. |
+    | `title` | `string` | Full title of the post. |
+    | `content` | `string` | Clean text of the post. |
+    | `is_spam` | `string` | `"True"` or `"False"`. |
     | `...` | `...` | (Other metadata) |
 
 #### The "Search Index" Hash
@@ -38,11 +38,11 @@ This hash stores only the data needed by RediSearch. It's a lightweight record d
 
 -   **Key**: `vector:post:<uuid>`
 -   **Schema**:
-    | Поле | Тип Данных (в Redis) | Описание |
+    | Field | Data Type (in Redis) | Description |
     |---|---|---|
-    | `vector` | `binary` | Бинарный вектор (embedding) поста. |
-    | `title` | `string` (TEXT) | Заголовок для полнотекстового поиска. |
-    | `content` | `string` (TEXT) | Текст для полнотекстового поиска. |
+    | `vector` | `binary` | Binary vector (embedding) of the post. |
+    | `title` | `string` (TEXT) | Title for full-text search. |
+    | `content` | `string` (TEXT) | Text for full-text search. |
 
 Here's the Python code that creates this search record:
 

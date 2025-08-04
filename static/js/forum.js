@@ -1,4 +1,4 @@
-// CleanForum - JavaScript для работы с API (Tailwind Version)
+// CleanForum - JavaScript for API interaction (Tailwind Version)
 
 class ForumAPI {
     constructor() {
@@ -16,16 +16,16 @@ class ForumAPI {
         });
 
         if (!response.ok) {
-            // Пытаемся получить детальное сообщение об ошибке из тела ответа
+            // Try to get a detailed error message from the response body
             try {
                 const errorData = await response.json();
-                // FastAPI часто использует поле 'detail' для ошибок
+                // FastAPI often uses the 'detail' field for errors
                 const message = errorData.detail || `HTTP error! status: ${response.status}`;
                 const error = new Error(message);
-                error.response = response; // Прикрепляем ответ для доп. контекста
+                error.response = response; // Attach the response for additional context
                 throw error;
             } catch (e) {
-                // Если тело ответа не JSON или пустое, выбрасываем общую ошибку
+                // If the response body is not JSON or is empty, throw a generic error
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
         }
@@ -163,21 +163,21 @@ function timeAgo(dateString) {
     const now = new Date();
     const diffInSeconds = Math.floor((now - date) / 1000);
 
-    if (diffInSeconds < 60) return 'только что';
-    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} мин назад`;
-    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} ч назад`;
-    return `${Math.floor(diffInSeconds / 86400)} дн назад`;
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) return `${Math.floor(diffInSeconds / 60)} min ago`;
+    if (diffInSeconds < 86400) return `${Math.floor(diffInSeconds / 3600)} h ago`;
+    return `${Math.floor(diffInSeconds / 86400)} d ago`;
 }
 
 function getSpamBadge(isSpam, spamScore) {
     if (isSpam) {
-        return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><i class="fas fa-ban mr-1"></i>СПАМ</span>';
+        return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800"><i class="fas fa-ban mr-1"></i>SPAM</span>';
     } else if (spamScore > 0.5) {
-        return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><i class="fas fa-exclamation-triangle mr-1"></i>Подозрительно</span>';
+        return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"><i class="fas fa-exclamation-triangle mr-1"></i>Suspicious</span>';
     } else if (spamScore > 0.3) {
-        return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><i class="fas fa-check-circle mr-1"></i>Проверено</span>';
+        return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"><i class="fas fa-check-circle mr-1"></i>Verified</span>';
     }
-    return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-shield-alt mr-1"></i>Чисто</span>';
+    return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-shield-alt mr-1"></i>Clean</span>';
 }
 
 // Main page functions
@@ -192,15 +192,15 @@ async function loadPosts(categoryId = null) {
                     <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                         <i class="fas fa-comments text-gray-400 text-2xl"></i>
                     </div>
-                    <p class="text-gray-500 text-lg">Пока нет постов</p>
-                    <p class="text-gray-400 text-sm">Будьте первым, кто создаст пост!</p>
+                    <p class="text-gray-500 text-lg">No posts yet</p>
+                    <p class="text-gray-400 text-sm">Be the first to create a post!</p>
                 </div>
             `;
             return;
         }
 
         container.innerHTML = posts.map(post => {
-            // Сначала рендерим Markdown в HTML, потом извлекаем чистый текст
+            // First, render Markdown to HTML, then extract the plain text
             const renderedHtml = marked.parse(post.content);
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = renderedHtml;
@@ -250,8 +250,8 @@ async function loadPosts(categoryId = null) {
         document.getElementById('posts-container').innerHTML =
             `<div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
                 <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
-                <p class="text-red-700 font-medium">Ошибка загрузки постов</p>
-                <p class="text-red-600 text-sm">Попробуйте обновить страницу</p>
+                <p class="text-red-700 font-medium">Error loading posts</p>
+                <p class="text-red-600 text-sm">Try refreshing the page</p>
             </div>`;
     }
 }
@@ -262,7 +262,7 @@ async function loadCategories() {
         const container = document.getElementById('categories-list');
 
         if (categories.length === 0) {
-            container.innerHTML = '<p class="text-gray-500 text-center py-4">Нет категорий</p>';
+            container.innerHTML = '<p class="text-gray-500 text-center py-4">No categories</p>';
             return;
         }
 
@@ -285,7 +285,7 @@ async function loadCategories() {
 // Post Detail page functions
 async function loadPostDetail(postId) {
     try {
-        // Загружаем данные поста и текущего пользователя параллельно
+        // Load post data and current user in parallel
         const [post, currentUser] = await Promise.all([
             api.getPost(postId),
             api.getMe()
@@ -296,7 +296,7 @@ async function loadPostDetail(postId) {
 
         document.title = `${post.title} - CleanForum`;
 
-        // Используем marked.js для рендеринга Markdown
+        // Use marked.js to render Markdown
         const contentToRender = marked.parse(post.content);
 
         container.innerHTML = `
@@ -317,7 +317,7 @@ async function loadPostDetail(postId) {
                         </div>
                         <div class="flex items-center">
                             <i class="fas fa-eye mr-2 text-green-500"></i>
-                            <span>${post.view_count} просмотров</span>
+                            <span>${post.view_count} views</span>
                         </div>
                         ${getSpamBadge(post.is_spam, post.spam_score)}
                     </div>
@@ -333,7 +333,7 @@ async function loadPostDetail(postId) {
             metaContainer.innerHTML = `
                 <div class="space-y-4">
                     <div class="p-4 bg-blue-50 rounded-xl">
-                        <h4 class="font-semibold text-blue-800 text-sm mb-2">Категория</h4>
+                        <h4 class="font-semibold text-blue-800 text-sm mb-2">Category</h4>
                         <a href="/category/${post.category_id}" class="inline-flex items-center px-3 py-1 bg-blue-100 text-blue-800 rounded-lg text-sm font-medium hover:bg-blue-200 transition-colors">
                             ${post.category_name}
                         </a>
@@ -341,7 +341,7 @@ async function loadPostDetail(postId) {
 
                     ${post.tags.length > 0 ? `
                     <div class="p-4 bg-purple-50 rounded-xl">
-                        <h4 class="font-semibold text-purple-800 text-sm mb-2">Теги</h4>
+                        <h4 class="font-semibold text-purple-800 text-sm mb-2">Tags</h4>
                         <div class="flex flex-wrap gap-2">
                             ${post.tags.map(tag => `<span class="px-2 py-1 bg-purple-100 text-purple-700 rounded-md text-xs font-medium">#${tag}</span>`).join('')}
                         </div>
@@ -349,10 +349,10 @@ async function loadPostDetail(postId) {
                     ` : ''}
 
                     <div class="p-4 bg-gray-50 rounded-xl">
-                        <h4 class="font-semibold text-gray-800 text-sm mb-2">Оценка безопасности</h4>
+                        <h4 class="font-semibold text-gray-800 text-sm mb-2">Security Rating</h4>
                         ${getSpamBadge(post.is_spam, post.spam_score)}
                         <div class="mt-2 text-xs text-gray-600">
-                            Достоверность: ${(100 - post.spam_score * 100).toFixed(1)}%
+                            Confidence: ${(100 - post.spam_score * 100).toFixed(1)}%
                         </div>
                     </div>
                 </div>
@@ -361,30 +361,30 @@ async function loadPostDetail(postId) {
 
         await loadComments(postId);
 
-        // Загружаем и отображаем похожие посты
+        // Load and display similar posts
         if (post.similar_posts) {
             renderSimilarPosts(post.similar_posts);
         }
 
-        // Добавляем кнопки действий, если текущий пользователь является автором поста
+        // Add action buttons if the current user is the author of the post
         if (currentUser && post.author_id === currentUser.id) {
-            // Проверяем, что контейнер для кнопок еще не создан
+            // Check that the button container has not already been created
             if (!document.getElementById('post-actions-container')) {
                 const actionsContainer = document.createElement('div');
-                actionsContainer.id = 'post-actions-container'; // Добавляем ID для проверки
+                actionsContainer.id = 'post-actions-container'; // Add ID for checking
                 actionsContainer.className = 'p-4 bg-gray-100 rounded-xl';
                 actionsContainer.innerHTML = `
-                    <h4 class="font-semibold text-gray-800 text-sm mb-2">Действия</h4>
+                    <h4 class="font-semibold text-gray-800 text-sm mb-2">Actions</h4>
                     <div class="space-y-2">
                         <a href="/posts/${post.id}/edit" class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-blue-100 text-blue-800 hover:bg-blue-200 transition-colors flex items-center">
                             <i class="fas fa-pencil-alt mr-2"></i>
-                            Редактировать пост
+                            Edit Post
                         </a>
                         <button
                             onclick="handleDeletePost('${post.id}')"
                             class="w-full text-left px-3 py-2 rounded-lg text-sm font-medium bg-red-100 text-red-800 hover:bg-red-200 transition-colors flex items-center">
                             <i class="fas fa-trash-alt mr-2"></i>
-                            Удалить пост
+                            Delete Post
                         </button>
                     </div>
                 `;
@@ -397,8 +397,8 @@ async function loadPostDetail(postId) {
         document.getElementById('post-detail-container').innerHTML =
             `<div class="bg-red-50 border border-red-200 rounded-2xl p-8 text-center">
                 <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-4"></i>
-                <h3 class="text-red-800 font-bold text-lg mb-2">Ошибка загрузки поста</h3>
-                <p class="text-red-600">Пост не найден или произошла ошибка сервера</p>
+                <h3 class="text-red-800 font-bold text-lg mb-2">Error loading post</h3>
+                <p class="text-red-600">Post not found or server error</p>
             </div>`;
     }
 }
@@ -414,8 +414,8 @@ async function loadComments(postId) {
                     <div class="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
                         <i class="fas fa-comments text-gray-400"></i>
                     </div>
-                    <p class="text-gray-500">Комментариев пока нет</p>
-                    <p class="text-gray-400 text-sm">Будьте первым, кто оставит комментарий!</p>
+                    <p class="text-gray-500">No comments yet</p>
+                    <p class="text-gray-400 text-sm">Be the first to leave a comment!</p>
                 </div>
             `;
             return;
@@ -448,7 +448,7 @@ async function handleCommentForm(postId) {
     const form = document.getElementById('add-comment-form');
     if (!form) return;
 
-    // Проверяем, не был ли обработчик уже назначен, чтобы избежать дублирования
+    // Check if the handler has already been assigned to avoid duplication
     if (form.dataset.commentFormHandled) {
         return;
     }
@@ -461,23 +461,23 @@ async function handleCommentForm(postId) {
         const submitBtn = form.querySelector('button[type="submit"]');
 
         if (!content) {
-            showAlert('Комментарий не может быть пустым.', 'warning');
+            showAlert('Comment cannot be empty.', 'warning');
             return;
         }
 
-        // Показываем состояние загрузки
+        // Show loading state
         const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Отправка...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Submitting...';
         submitBtn.disabled = true;
 
         try {
             await api.createComment({ post_id: postId, content: content });
-            showAlert('Комментарий успешно добавлен!', 'success');
+            showAlert('Comment added successfully!', 'success');
             contentInput.value = '';
-            await loadComments(postId); // Перезагружаем комментарии
+            await loadComments(postId); // Reload comments
         } catch (error) {
             console.error('Error creating comment:', error);
-            showAlert(error.message || 'Ошибка при добавлении комментария.', 'danger');
+            showAlert(error.message || 'Error adding comment.', 'danger');
         } finally {
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
@@ -486,16 +486,16 @@ async function handleCommentForm(postId) {
 }
 
 async function handleDeletePost(postId) {
-    if (confirm('Вы уверены, что хотите удалить этот пост? Это действие необратимо.')) {
+    if (confirm('Are you sure you want to delete this post? This action is irreversible.')) {
         try {
             await api.deletePost(postId);
-            showAlert('Пост успешно удален. Перенаправление на главную...', 'success');
+            showAlert('Post deleted successfully. Redirecting to homepage...', 'success');
             setTimeout(() => {
                 window.location.href = '/';
             }, 2000);
         } catch (error) {
             console.error('Error deleting post:', error);
-            showAlert('Ошибка при удалении поста. Возможно, у вас нет прав.', 'danger');
+            showAlert('Error deleting post. You may not have permission.', 'danger');
         }
     }
 }
@@ -508,7 +508,7 @@ function renderSimilarPosts(posts) {
         container.innerHTML = `
             <div class="text-center py-6 text-gray-500">
                 <i class="fas fa-search mb-2 text-2xl"></i>
-                <p class="text-sm">Похожих постов не найдено</p>
+                <p class="text-sm">No similar posts found</p>
             </div>
         `;
         return;
@@ -533,42 +533,42 @@ async function loadStatsForHomePage() {
     try {
         const stats = await api.getSystemStats();
         const spamStatsContainer = document.getElementById('spam-stats');
-        const quickStatsContainer = document.getElementById('quick-stats'); // Новый ID для блока быстрой статистики
+        const quickStatsContainer = document.getElementById('quick-stats'); // New ID for the quick stats block
 
-        // Обновление блока "Защита от спама"
+        // Update the "Spam Protection" block
         if (spamStatsContainer) {
             spamStatsContainer.innerHTML = `
                 <div class="text-center">
                     <i class="fas fa-shield-alt mb-2 text-3xl text-green-500"></i>
-                    <p class="text-gray-700 font-semibold text-lg">Статистика спама</p>
-                    <p class="text-gray-600 text-sm">Обнаружено: <span class="font-bold text-red-600">${stats.spam_posts}</span> постов</p>
-                    <p class="text-gray-600 text-sm">Процент спама: <span class="font-bold text-yellow-600">${stats.spam_percentage}%</span></p>
+                    <p class="text-gray-700 font-semibold text-lg">Spam Statistics</p>
+                    <p class="text-gray-600 text-sm">Detected: <span class="font-bold text-red-600">${stats.spam_posts}</span> posts</p>
+                    <p class="text-gray-600 text-sm">Spam percentage: <span class="font-bold text-yellow-600">${stats.spam_percentage}%</span></p>
                 </div>
             `;
         }
 
-        // Обновление блока "Быстрая статистика"
+        // Update the "Quick Stats" block
         if (quickStatsContainer) {
             quickStatsContainer.innerHTML = `
                 <div class="space-y-3">
                     <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
-                        <span class="text-gray-600">Всего постов</span>
+                        <span class="text-gray-600">Total Posts</span>
                         <span class="font-bold text-green-700">${stats.total_posts}</span>
                     </div>
                     <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
-                        <span class="text-gray-600">Опубликованных постов</span>
+                        <span class="text-gray-600">Published Posts</span>
                         <span class="font-bold text-green-700">${stats.published_posts}</span>
                     </div>
                     <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
-                        <span class="text-gray-600">Всего комментариев</span>
+                        <span class="text-gray-600">Total Comments</span>
                         <span class="font-bold text-green-700">${stats.total_comments}</span>
                     </div>
                     <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
-                        <span class="text-gray-600">Заблокировано спама (посты)</span>
+                        <span class="text-gray-600">Spam Posts Blocked</span>
                         <span class="font-bold text-yellow-700">${stats.spam_posts}</span>
                     </div>
                     <div class="flex justify-between items-center p-3 bg-gradient-to-r from-green-50 to-yellow-50 rounded-lg">
-                        <span class="text-gray-600">Заблокировано спама (комментарии)</span>
+                        <span class="text-gray-600">Spam Comments Blocked</span>
                         <span class="font-bold text-yellow-700">${stats.spam_comments}</span>
                     </div>
                 </div>
@@ -579,7 +579,7 @@ async function loadStatsForHomePage() {
         console.error('Error loading home page stats:', error);
         const errorHtml = `
             <div class="p-4 text-sm text-red-700 bg-red-100 rounded-lg" role="alert">
-                Ошибка загрузки статистики.
+                Error loading statistics.
             </div>
         `;
         const spamStatsContainer = document.getElementById('spam-stats');
@@ -616,7 +616,7 @@ function showAlert(message, type = 'info') {
 
     document.querySelector('main').insertBefore(alertDiv, document.querySelector('main').firstChild);
 
-    // Автоматически скрываем через 5 секунд
+    // Automatically hide after 5 seconds
     setTimeout(() => {
         if (alertDiv.parentElement) {
             alertDiv.remove();
@@ -626,17 +626,17 @@ function showAlert(message, type = 'info') {
 
 // Create Post page functions
 async function initCreatePostPage() {
-    // Загружаем категории в селект
+    // Load categories into the select element
     try {
         const categories = await api.getCategories();
         const select = document.getElementById('post-category');
-        select.innerHTML = '<option value="">Выберите категорию</option>' +
+        select.innerHTML = '<option value="">Select a category</option>' +
             categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
     } catch (error) {
         console.error('Error loading categories for select:', error);
     }
 
-    // Настраиваем отправку формы
+    // Configure form submission
     const form = document.getElementById('create-post-form');
     if (!form) return;
 
@@ -645,7 +645,7 @@ async function initCreatePostPage() {
 
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Создание поста...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Creating post...';
         submitBtn.disabled = true;
 
         try {
@@ -657,28 +657,28 @@ async function initCreatePostPage() {
             };
 
             if (!postData.title || !postData.content || !postData.category_id) {
-                 showAlert('Заполните все обязательные поля: заголовок, содержание и категория.', 'warning');
+                 showAlert('Please fill in all required fields: title, content, and category.', 'warning');
                  throw new Error("Required fields are missing.");
             }
 
             const newPost = await api.createPost(postData);
 
             if (newPost.is_spam) {
-                // Показываем сообщение о спаме в специальном контейнере
+                // Show spam message in a dedicated container
                 const spamContainer = document.getElementById('spam-message-container');
                 if (spamContainer) {
                     spamContainer.innerHTML = `
                         <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
-                        <p class="text-yellow-800 font-medium">Ваш пост определен как спам.</p>
-                        <p class="text-yellow-600 text-sm">Он не будет виден другим пользователям, но поможет нам в обучении системы модерации.</p>
+                        <p class="text-yellow-800 font-medium">Your post has been identified as spam.</p>
+                        <p class="text-yellow-600 text-sm">It will not be visible to other users, but it will help us train our moderation system.</p>
                     `;
                     spamContainer.classList.remove('hidden');
                 }
-                // Блокируем кнопку отправки и меняем текст
-                submitBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Проверено';
-                // Не перенаправляем пользователя и не показываем стандартный alert
+                // Lock the submit button and change the text
+                submitBtn.innerHTML = '<i class="fas fa-check-circle mr-2"></i> Checked';
+                // Do not redirect the user or show the standard alert
             } else {
-                showAlert('Пост успешно создан! Перенаправление...', 'success');
+                showAlert('Post created successfully! Redirecting...', 'success');
                 setTimeout(() => {
                     window.location.href = `/posts/${newPost.id}`;
                 }, 2000);
@@ -686,8 +686,8 @@ async function initCreatePostPage() {
 
         } catch (error) {
             console.error('Error creating post:', error);
-            // Используем детальное сообщение об ошибке, полученное от API
-            showAlert(error.message || 'Произошла неизвестная ошибка. Пожалуйста, попробуйте еще раз.', 'danger');
+            // Use the detailed error message from the API
+            showAlert(error.message || 'An unknown error occurred. Please try again.', 'danger');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }
@@ -727,7 +727,7 @@ async function handleSearchForm() {
             resultsContainer.innerHTML = `
                 <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 text-center">
                     <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
-                    <p class="text-yellow-800 font-medium">Поисковый запрос должен содержать минимум 2 символа</p>
+                    <p class="text-yellow-800 font-medium">Search query must be at least 2 characters long</p>
                 </div>
             `;
             return;
@@ -736,7 +736,7 @@ async function handleSearchForm() {
         resultsContainer.innerHTML = `
             <div class="text-center py-12">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                <p class="text-gray-600">Поиск по базе данных...</p>
+                <p class="text-gray-600">Searching the database...</p>
             </div>
         `;
 
@@ -744,12 +744,12 @@ async function handleSearchForm() {
             const posts = await api.searchPosts(query);
             renderSearchResults(posts, resultsContainer);
         } catch (error) {
-            console.error('Ошибка поиска:', error);
+            console.error('Search error:', error);
             resultsContainer.innerHTML = `
                 <div class="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
                     <i class="fas fa-exclamation-triangle text-red-500 text-2xl mb-2"></i>
-                    <p class="text-red-700 font-medium">Произошла ошибка во время поиска</p>
-                    <p class="text-red-600 text-sm">Попробуйте еще раз или обратитесь к администратору</p>
+                    <p class="text-red-700 font-medium">An error occurred during the search</p>
+                    <p class="text-red-600 text-sm">Please try again or contact an administrator</p>
                 </div>
             `;
         }
@@ -763,8 +763,8 @@ function renderSearchResults(posts, container) {
                 <div class="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
                     <i class="fas fa-search text-gray-400 text-2xl"></i>
                 </div>
-                <h3 class="text-xl font-semibold text-gray-800 mb-2">Ничего не найдено</h3>
-                <p class="text-gray-600">Попробуйте изменить поисковый запрос или использовать другие ключевые слова</p>
+                <h3 class="text-xl font-semibold text-gray-800 mb-2">Nothing found</h3>
+                <p class="text-gray-600">Try changing your search query or using other keywords</p>
             </div>
         `;
         return;
@@ -772,7 +772,7 @@ function renderSearchResults(posts, container) {
 
     container.innerHTML = `
         <div class="mb-6">
-            <p class="text-gray-600">Найдено результатов: <span class="font-semibold text-blue-600">${posts.length}</span></p>
+            <p class="text-gray-600">Found results: <span class="font-semibold text-blue-600">${posts.length}</span></p>
         </div>
         <div class="space-y-6">
             ${posts.map(post => `
@@ -843,35 +843,35 @@ async function initEditPostPage(postId) {
     const categorySelect = document.getElementById('post-category');
     const tagsInput = document.getElementById('post-tags');
 
-    // 1. Загрузка категорий и данных поста параллельно
+    // 1. Load categories and post data in parallel
     try {
         const [categories, post] = await Promise.all([
             api.getCategories(),
             api.getPost(postId)
         ]);
 
-        // Заполняем категории
+        // Fill in the categories
         categorySelect.innerHTML = categories.map(cat => `<option value="${cat.id}">${cat.name}</option>`).join('');
 
-        // Заполняем поля формы
+        // Fill in the form fields
         titleInput.value = post.title;
-        contentInput.value = post.content; // Теперь просто текст
+        contentInput.value = post.content; // Now just text
         categorySelect.value = post.category_id;
         tagsInput.value = post.tags.join(', ');
 
     } catch (error) {
         console.error('Error loading data for edit page:', error);
-        showAlert('Ошибка загрузки данных для редактирования.', 'danger');
-        if (form) form.innerHTML = '<p class="text-red-500">Не удалось загрузить данные.</p>';
+        showAlert('Error loading data for editing.', 'danger');
+        if (form) form.innerHTML = '<p class="text-red-500">Could not load data.</p>';
         return;
     }
 
-    // 2. Обработка отправки формы
+    // 2. Handle form submission
     form.addEventListener('submit', async (event) => {
         event.preventDefault();
         const submitBtn = form.querySelector('button[type="submit"]');
         const originalText = submitBtn.innerHTML;
-        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Сохранение...';
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Saving...';
         submitBtn.disabled = true;
 
         try {
@@ -883,12 +883,12 @@ async function initEditPostPage(postId) {
             };
 
             await api.updatePost(postId, postData);
-                showAlert('Пост успешно обновлен!', 'success');
+                showAlert('Post updated successfully!', 'success');
                 setTimeout(() => window.location.href = `/posts/${postId}`, 1500);
 
             } catch (error) {
                 console.error('Error updating post:', error);
-                showAlert(error.message || 'Ошибка при обновлении поста.', 'danger');
+                showAlert(error.message || 'Error updating post.', 'danger');
                 submitBtn.innerHTML = originalText;
                 submitBtn.disabled = false;
             }

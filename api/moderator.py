@@ -1,5 +1,5 @@
 """
-API для панели модератора с антиспам функциями
+API for the moderator panel with anti-spam functions
 """
 from fastapi import APIRouter, HTTPException, Query
 import logging
@@ -21,7 +21,7 @@ from fastapi import __version__ as fastapi_version
 
 router = APIRouter()
 
-# --- Модели данных для API ---
+# --- API Data Models ---
 class ModerationAction(BaseModel):
     entity_id: str
     action: str  # "approve", "mark_spam"
@@ -40,25 +40,25 @@ class SpamAnalysisResponse(BaseModel):
     analyzed_at: Optional[str] = None
     neighbors: List[PostResponse] = []
 
-# --- Эндпоинты для постов ---
+# --- Post Endpoints ---
 
 @router.get("/pending-posts", response_model=List[PostResponse])
 async def get_pending_posts(limit: int = Query(50, le=100)):
-    """Получить все посты для модерации."""
+    """Get all posts for moderation."""
     return await Post.get_all_for_moderation(limit=limit)
 
 @router.get("/posts/{post_id}/analysis", response_model=SpamAnalysisResponse)
 async def get_post_analysis(post_id: str):
-    """Получить детальный анализ спама для поста."""
+    """Get detailed spam analysis for a post."""
     analysis_data = await db.hgetall(f"vector_analysis:post:{post_id}")
     if not analysis_data:
-        raise HTTPException(status_code=404, detail="Анализ для поста не найден.")
+        raise HTTPException(status_code=404, detail="Analysis for the post not found.")
 
-    # Получаем соседей, использованных при анализе
+    # Get the neighbors used in the analysis
     neighbors_json = analysis_data.get("neighbors", "[]")
     try:
         neighbors_data = json.loads(neighbors_json)
-        # Pydantic автоматически валидирует и преобразует словари в PostResponse
+        # Pydantic automatically validates and converts dictionaries to PostResponse
         neighbors = [PostResponse(**data) for data in neighbors_data]
     except (json.JSONDecodeError, TypeError):
         neighbors = []
@@ -79,40 +79,40 @@ async def get_post_analysis(post_id: str):
 
 @router.post("/moderate-post")
 async def moderate_post(action: ModerationAction):
-    """Выполнить действие модерации над постом."""
+    """Perform a moderation action on a post."""
     post = await Post.get_by_id(action.entity_id)
     if not post:
-        raise HTTPException(status_code=404, detail="Пост не найден")
+        raise HTTPException(status_code=404, detail="Post not found")
 
     if action.action == "approve":
         await Post.mark_as_spam(action.entity_id, 0.0, False)
         await vector_classifier.retrain_with_feedback(action.entity_id, "post", False, action.moderator_id)
-        return {"message": "Пост одобрен"}
+        return {"message": "Post approved"}
     elif action.action == "mark_spam":
         await Post.mark_as_spam(action.entity_id, 1.0, True)
         await vector_classifier.retrain_with_feedback(action.entity_id, "post", True, action.moderator_id)
-        return {"message": "Пост помечен как спам"}
+        return {"message": "Post marked as spam"}
     else:
-        raise HTTPException(status_code=400, detail="Неизвестное действие")
+        raise HTTPException(status_code=400, detail="Unknown action")
 
-# --- Эндпоинты для комментариев ---
+# --- Comment Endpoints ---
 
 @router.get("/pending-comments", response_model=List[CommentResponse])
 async def get_pending_comments(limit: int = Query(50, le=100)):
-    """Получить все комментарии для модерации."""
+    """Get all comments for moderation."""
     return await Comment.get_all_for_moderation(limit=limit)
 
 @router.get("/comments/{comment_id}/analysis", response_model=SpamAnalysisResponse)
 async def get_comment_analysis(comment_id: str):
-    """Получить детальный анализ спама для комментария."""
+    """Get detailed spam analysis for a comment."""
     analysis_data = await db.hgetall(f"vector_analysis:comment:{comment_id}")
     if not analysis_data:
-        raise HTTPException(status_code=404, detail="Анализ для комментария не найден.")
+        raise HTTPException(status_code=404, detail="Analysis for the comment not found.")
 
-    # Комментарии не имеют 'похожих постов' в том же смысле, что и посты,
-    # поэтому neighbors здесь будет пустым или содержать комментарии,
-    # которые мы не будем пытаться преобразовать в PostResponse.
-    # Оставляем пустым для консистентности.
+    # Comments do not have 'similar posts' in the same sense as posts,
+    # so neighbors here will be empty or contain comments,
+    # which we will not try to convert to PostResponse.
+    # Leaving it empty for consistency.
     neighbors = []
 
     return SpamAnalysisResponse(
@@ -131,32 +131,32 @@ async def get_comment_analysis(comment_id: str):
 
 @router.post("/moderate-comment")
 async def moderate_comment(action: ModerationAction):
-    """Выполнить действие модерации над комментарием."""
+    """Perform a moderation action on a comment."""
     comment = await Comment.get_by_id(action.entity_id)
     if not comment:
-        raise HTTPException(status_code=404, detail="Комментарий не найден")
+        raise HTTPException(status_code=404, detail="Comment not found")
 
     if action.action == "approve":
         await Comment.mark_as_spam(action.entity_id, 0.0, False)
         await vector_classifier.retrain_with_feedback(action.entity_id, "comment", False, action.moderator_id)
-        return {"message": "Комментарий одобрен"}
+        return {"message": "Comment approved"}
     elif action.action == "mark_spam":
         await Comment.mark_as_spam(action.entity_id, 1.0, True)
         await vector_classifier.retrain_with_feedback(action.entity_id, "comment", True, action.moderator_id)
-        return {"message": "Комментарий помечен как спам"}
+        return {"message": "Comment marked as spam"}
     else:
-        raise HTTPException(status_code=400, detail="Неизвестное действие")
+        raise HTTPException(status_code=400, detail="Unknown action")
 
 @router.post("/analyze-all-posts")
 async def analyze_all_posts():
-    """Запускает фоновый анализ всех постов, у которых нет анализа."""
-    logging.info("Запрос на анализ всех постов")
-    posts = await Post.get_all_for_moderation(limit=1000) # Ограничение, чтобы избежать перегрузки
+    """Triggers a background analysis of all posts that do not have an analysis."""
+    logging.info("Request to analyze all posts")
+    posts = await Post.get_all_for_moderation(limit=1000) # Limit to avoid overload
     analyzed_count = 0
     skipped_count = 0
 
     for post in posts:
-        # Проверяем, существует ли уже анализ
+        # Check if an analysis already exists
         if not await db.exists(f"vector_analysis:{post.id}"):
             await vector_classifier.analyze_with_vectors(
                 post.id, post.title, post.content, post.tags, post.author_id
@@ -166,29 +166,29 @@ async def analyze_all_posts():
             skipped_count += 1
 
     return {
-        "message": f"Анализ завершен. Проанализировано: {analyzed_count}, пропущено: {skipped_count}",
+        "message": f"Analysis complete. Analyzed: {analyzed_count}, skipped: {skipped_count}",
         "analyzed": analyzed_count,
         "skipped": skipped_count
     }
 
 @router.post("/retrain")
 async def retrain_model():
-    """Запустить переобучение модели на основе обратной связи"""
-    logging.info("🔄 Запуск переобучения модели...")
-    # В реальном приложении здесь был бы код переобучения
-    # на основе собранных данных обратной связи
+    """Start model retraining based on feedback"""
+    logging.info("🔄 Starting model retraining...")
+    # In a real application, there would be code here for retraining
+    # based on the collected feedback data
 
     return {
-        "message": "Переобучение запущено",
+        "message": "Retraining started",
         "status": "in_progress",
         "started_at": datetime.now().isoformat()
     }
 
 @router.get("/training-logs")
 async def get_training_logs(limit: int = Query(100, le=500)):
-    """Получить логи обучения"""
+    """Get training logs"""
 
-    # Заглушка для демо
+    # Stub for demo
     logs = [
         {
             "timestamp": datetime.now().isoformat(),
@@ -206,9 +206,9 @@ async def get_training_logs(limit: int = Query(100, le=500)):
 
 @router.get("/feedback-stats")
 async def get_feedback_statistics():
-    """Получить статистику обратной связи модераторов"""
+    """Get moderator feedback statistics"""
 
-    # В реальном приложении здесь анализ feedback данных из Redis
+    # In a real application, this would analyze feedback data from Redis
     return {
         "total_feedback": 0,
         "spam_confirmations": 0,
@@ -219,18 +219,18 @@ async def get_feedback_statistics():
 
 @router.post("/analyze-post/{post_id}")
 async def reanalyze_post(post_id: str):
-    """Повторно проанализировать пост на спам"""
+    """Re-analyze a post for spam"""
 
     post = await Post.get_by_id(post_id)
     if not post:
-        raise HTTPException(status_code=404, detail="Пост не найден")
+        raise HTTPException(status_code=404, detail="Post not found")
 
-    # Проводим повторный анализ
+    # Perform re-analysis
     analysis = await vector_classifier.analyze_with_vectors(
         post_id, post.title, post.content, post.tags, post.author_id
     )
 
-    # Обновляем статус поста если нужно
+    # Update the post status if needed
     if analysis["is_spam"] != post.is_spam:
         await Post.mark_as_spam(post_id, analysis["spam_score"], analysis["is_spam"])
 
@@ -242,28 +242,28 @@ async def reanalyze_post(post_id: str):
 
 @router.get("/system-stats")
 async def get_system_stats():
-    """Получить системную статистику и информацию о приложении."""
-    logging.info("Запрос системной статистики")
+    """Get system statistics and application information."""
+    logging.info("Requesting system statistics")
     try:
         redis_info = await db.get_server_info()
         vector_index_info = await vector_manager.get_index_info()
 
-        # Статистика по постам
+        # Post statistics
         total_posts = await Post.count_all()
         spam_posts = await Post.count_spam()
         published_posts = await Post.count_published()
 
-        # Статистика по комментариям
+        # Comment statistics
         total_comments = await Comment.count_all()
         spam_comments = await Comment.count_spam()
 
-        # Общая статистика
+        # Overall statistics
         total_content = total_posts + total_comments
         total_spam = spam_posts + spam_comments
         spam_percentage = (total_spam / total_content * 100) if total_content > 0 else 0
 
         return {
-            # Статистика контента
+            # Content statistics
             "total_posts": total_posts,
             "published_posts": published_posts,
             "spam_posts": spam_posts,
@@ -271,7 +271,7 @@ async def get_system_stats():
             "spam_comments": spam_comments,
             "spam_percentage": round(spam_percentage, 2),
             
-            # Системная информация
+            # System information
             "redis_version": redis_info.get("redis_version"),
             "used_memory": redis_info.get("used_memory_human"),
             "vector_count": vector_index_info.get("num_docs", 0),
@@ -280,5 +280,5 @@ async def get_system_stats():
             "app_version": settings.APP_VERSION
         }
     except Exception as e:
-        logging.error(f"Ошибка при сборе системной статистики: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Не удалось собрать статистику")
+        logging.error(f"Error collecting system statistics: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Could not collect statistics")

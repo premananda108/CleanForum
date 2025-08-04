@@ -1,5 +1,5 @@
 """
-Модель поста
+Post model
 """
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -32,7 +32,7 @@ class PostUpdate(BaseModel):
 class PostResponse(BaseModel):
     id: str
     title: str
-    content: str  # Теперь это Markdown контент
+    content: str  # Now this is Markdown content
     category_id: str
     category_name: str = ""
     author_id: str
@@ -46,31 +46,31 @@ class PostResponse(BaseModel):
     vote_score: int = 0
     is_spam: bool = False
     spam_score: float = 0.0
-    reading_time: int = 0  # в минутах
+    reading_time: int = 0  # in minutes
     similar_posts: Optional[List['PostResponse']] = None
 
 class Post:
-    """Класс для работы с постами"""
+    """Class for working with posts"""
 
     @staticmethod
     def calculate_reading_time(text_content: str) -> int:
-        """Рассчитать время чтения (примерно 200 слов в минуту) на основе чистого текста."""
+        """Calculate reading time (approximately 200 words per minute) based on plain text."""
         word_count = len(text_content.split())
         return max(1, word_count // 200)
 
     @staticmethod
     async def create(post_data: PostCreate, author_id: str) -> Optional[str]:
         """
-        Создать новый пост с немедленным анализом на спам.
-        Если пост определен как спам, он сохраняется со статусом SPAM.
+        Create a new post with immediate spam analysis.
+        If the post is identified as spam, it is saved with the SPAM status.
         """
         post_id = str(uuid.uuid4())
         now = datetime.now()
 
-        # Markdown контент
+        # Markdown content
         text_for_analysis = post_data.content
 
-        # Проводим анализ на спам
+        # Perform spam analysis
         from services.vector_classifier import vector_classifier
         analysis_results = await vector_classifier.analyze_with_vectors(
             post_id, post_data.title, text_for_analysis, post_data.tags, author_id
@@ -81,7 +81,7 @@ class Post:
 
         if is_spam:
             import logging
-            logging.warning(f"Пост от {author_id} определен как СПАМ (score: {spam_score:.2f}) и будет сохранен со статусом 'spam'.")
+            logging.warning(f"Post from {author_id} was identified as SPAM (score: {spam_score:.2f}) and will be saved with 'spam' status.")
             status = PostStatus.SPAM
         else:
             status = PostStatus.PUBLISHED
@@ -104,7 +104,7 @@ class Post:
             "reading_time": Post.calculate_reading_time(text_for_analysis)
         }
 
-        # Сохраняем пост
+        # Save the post
         async with db.redis_client.pipeline(transaction=True) as pipe:
             pipe.hset(f"post:{post_id}", mapping=post_info)
             timestamp = now.timestamp()
@@ -113,11 +113,11 @@ class Post:
             pipe.zadd(f"posts:category:{post_data.category_id}", {post_id: timestamp})
             await pipe.execute()
 
-        # --- Начало нового кода ---
-        # После успешного сохранения, добавляем пост в поисковый индекс
+        # --- Start of new code ---
+        # After successful saving, add the post to the search index
         try:
             from services.redis_manager import vector_manager
-            # Убедимся, что классификатор инициализирован для создания вектора
+            # Make sure the classifier is initialized to create a vector
             if not vector_classifier.is_initialized:
                 await vector_classifier.initialize()
 
@@ -131,28 +131,28 @@ class Post:
                 content=text_for_analysis
             )
             import logging
-            logging.info(f"Пост {post_id} успешно добавлен в поисковый индекс.")
+            logging.info(f"Post {post_id} successfully added to the search index.")
         except Exception as e:
             import logging
-            logging.error(f"Не удалось добавить пост {post_id} в поисковый индекс: {e}", exc_info=True)
-        # --- Конец нового кода ---
+            logging.error(f"Could not add post {post_id} to the search index: {e}", exc_info=True)
+        # --- End of new code ---
 
         return post_id
 
     @staticmethod
     async def get_by_id(post_id: str, increment_views: bool = False) -> Optional[PostResponse]:
-        """Получить пост по ID"""
+        """Get a post by ID"""
         post_data = await db.hgetall(f"post:{post_id}")
         if not post_data:
             return None
 
-        # Увеличиваем счетчик просмотров
+        # Increment the view counter
         if increment_views:
             new_view_count = int(post_data.get("view_count", 0)) + 1
             await db.hset(f"post:{post_id}", {"view_count": new_view_count})
             post_data["view_count"] = str(new_view_count)
 
-        # Получаем дополнительную информацию
+        # Get additional information
         from models.category import Category
         from models.user import User
 
@@ -181,8 +181,8 @@ class Post:
 
     @staticmethod
     async def get_all(limit: int = 20, offset: int = 0) -> List[PostResponse]:
-        """Получить список постов"""
-        # Получаем ID постов, отсортированных по времени создания
+        """Get a list of posts"""
+        # Get post IDs sorted by creation time
         post_ids = await db.zrevrange("posts:all", offset, offset + limit - 1)
 
         posts = []
@@ -195,7 +195,7 @@ class Post:
 
     @staticmethod
     async def get_by_category(category_id: str, limit: int = 20, offset: int = 0) -> List[PostResponse]:
-        """Получить посты по категории"""
+        """Get posts by category"""
         post_ids = await db.zrevrange(f"posts:category:{category_id}", offset, offset + limit - 1)
 
         posts = []
@@ -208,7 +208,7 @@ class Post:
 
     @staticmethod
     async def get_all_for_moderation(limit: int = 50, offset: int = 0) -> List[PostResponse]:
-        """Получить все посты для модерации, включая спам."""
+        """Get all posts for moderation, including spam."""
         post_ids = await db.zrevrange("posts:all", offset, offset + limit - 1)
 
         posts = []
@@ -220,7 +220,7 @@ class Post:
 
     @staticmethod
     async def update(post_id: str, post_data: PostUpdate) -> bool:
-        """Обновить пост"""
+        """Update a post"""
         existing_data = await db.hgetall(f"post:{post_id}")
         if not existing_data:
             return False
@@ -243,7 +243,7 @@ class Post:
 
         if update_fields:
             update_fields["updated_at"] = datetime.now().isoformat()
-            # Сбрасываем статус спама при любом обновлении, чтобы запустить повторную проверку
+            # Reset the spam status on any update to trigger a re-check
             if reanalyze_spam:
                 update_fields["is_spam"] = str(False)
                 update_fields["spam_score"] = 0.0
@@ -255,7 +255,7 @@ class Post:
 
     @staticmethod
     async def mark_as_spam(post_id: str, spam_score: float, is_spam: bool = True):
-        """Отметить пост как спам и обновить его статус."""
+        """Mark a post as spam and update its status."""
         status = PostStatus.SPAM.value if is_spam else PostStatus.PUBLISHED.value
         await db.hset(f"post:{post_id}", {
             "is_spam": str(is_spam),
@@ -271,52 +271,52 @@ class Post:
     @staticmethod
     async def mark_as_deleted(post_id: str) -> bool:
         """
-        Помечает пост как удаленный (мягкое удаление).
-        Удаляет пост из всех списков, обновляет счетчики и удаляет вектор.
+        Marks a post as deleted (soft delete).
+        Removes the post from all lists, updates counters, and deletes the vector.
         """
-        # 1. Получаем данные поста, чтобы знать author_id и category_id
+        # 1. Get post data to know author_id and category_id
         post_data = await db.hgetall(f"post:{post_id}")
         if not post_data:
-            return False  # Пост не найден
+            return False  # Post not found
 
         author_id = post_data.get("author_id")
         category_id = post_data.get("category_id")
 
-        # 2. Используем транзакцию для атомарности
+        # 2. Use a transaction for atomicity
         async with db.redis_client.pipeline(transaction=True) as pipe:
-            # Помечаем пост как удаленный
+            # Mark the post as deleted
             pipe.hset(f"post:{post_id}", "status", PostStatus.DELETED.value)
 
-            # Удаляем ID поста из всех отсортированных множеств
+            # Remove the post ID from all sorted sets
             pipe.zrem("posts:all", post_id)
             if category_id:
                 pipe.zrem(f"posts:category:{category_id}", post_id)
             if author_id:
                 pipe.zrem(f"posts:author:{author_id}", post_id)
 
-            # Удаляем из множества спама, если он там был
+            # Remove from the spam set if it was there
             pipe.srem("posts:spam", post_id)
 
-            # Выполняем транзакцию
+            # Execute the transaction
             await pipe.execute()
 
-        # 3. Обновляем счетчик постов в категории (вне транзакции)
+        # 3. Update the post count in the category (outside the transaction)
         if category_id:
             from models.category import Category
             await Category.update_post_count(category_id, -1)
 
-        # 4. Удаляем вектор из поискового индекса (вне транзакции)
+        # 4. Delete the vector from the search index (outside the transaction)
         from services.redis_manager import vector_manager
         await vector_manager.delete_vector(f"post:{post_id}")
 
         import logging
-        logging.info(f"Пост {post_id} был помечен как удаленный.")
+        logging.info(f"Post {post_id} was marked as deleted.")
 
         return True
 
     @staticmethod
     async def update_comment_count(post_id: str, delta: int = 1):
-        """Обновить количество комментариев"""
+        """Update the number of comments"""
         post_data = await db.hgetall(f"post:{post_id}")
         if not post_data:
             return
@@ -326,17 +326,17 @@ class Post:
 
     @staticmethod
     async def count_all() -> int:
-        """Подсчитать общее количество постов."""
+        """Count the total number of posts."""
         return await db.zcard("posts:all")
 
     @staticmethod
     async def count_spam() -> int:
-        """Подсчитать количество спам-постов."""
+        """Count the number of spam posts."""
         return await db.scard("posts:spam")
 
     @staticmethod
     async def count_published() -> int:
-        """Подсчитать количество опубликованных постов."""
+        """Count the number of published posts."""
         all_post_ids = await db.zrevrange("posts:all", 0, -1)
         published_count = 0
         for post_id in all_post_ids:
@@ -347,30 +347,30 @@ class Post:
 
     @staticmethod
     async def get_similar_posts(post_id: str, limit: int = 5) -> List['PostResponse']:
-        """Найти похожие посты, используя векторный поиск."""
+        """Find similar posts using vector search."""
         import logging
         from services.redis_manager import vector_manager
 
-        logging.info(f"Начинаем поиск похожих постов для post_id: {post_id}")
+        logging.info(f"Starting search for similar posts for post_id: {post_id}")
 
         vector_doc_id = f"post:{post_id}"
         post_vector = await vector_manager.get_vector_by_id(vector_doc_id)
 
         if post_vector is None:
-            logging.warning(f"Вектор для {vector_doc_id} не найден. Невозможно найти похожие посты.")
+            logging.warning(f"Vector for {vector_doc_id} not found. Cannot find similar posts.")
             return []
 
-        logging.info(f"Вектор для {vector_doc_id} успешно получен.")
+        logging.info(f"Vector for {vector_doc_id} retrieved successfully.")
 
         try:
-            # Запрашиваем на один больше, т.к. сам пост может вернуться
+            # Request one more, as the post itself might be returned
             similar_results = await vector_manager.search_similar(
                 post_vector,
-                k=limit + 5  # Запрашиваем больше, чтобы компенсировать фильтрацию
+                k=limit + 5  # Request more to compensate for filtering
             )
-            logging.info(f"Найдено {len(similar_results)} похожих результатов для {vector_doc_id}.")
+            logging.info(f"Found {len(similar_results)} similar results for {vector_doc_id}.")
         except Exception as e:
-            logging.error(f"Ошибка при поиске похожих векторов для {vector_doc_id}: {e}", exc_info=True)
+            logging.error(f"Error searching for similar vectors for {vector_doc_id}: {e}", exc_info=True)
             return []
 
         similar_posts = []
@@ -379,34 +379,34 @@ class Post:
             if not similar_post_id or similar_post_id == post_id:
                 continue
 
-            # Проверяем порог схожести
+            # Check the similarity threshold
             score = result.get('score', 1.0)
             if score > settings.SIMILARITY_THRESHOLD:
                 continue
 
             post = await Post.get_by_id(similar_post_id)
-            # По требованию заказчика, убираем фильтрацию по статусу
+            # As per customer requirement, remove status filtering
             if post:
                 similar_posts.append(post)
 
             if len(similar_posts) >= limit:
                 break
 
-        logging.info(f"Возвращаем {len(similar_posts)} похожих постов для {post_id}.")
+        logging.info(f"Returning {len(similar_posts)} similar posts for {post_id}.")
         return similar_posts
 
 
     @staticmethod
     async def search_by_text(query: str, limit: int = 20, offset: int = 0) -> List['PostResponse']:
-        """Полнотекстовый поиск постов с использованием RediSearch (упрощенная версия)."""
+        """Full-text search for posts using RediSearch (simplified version)."""
 
-        # Экранируем спецсимволы и добавляем звездочку для поиска по префиксу
-        # Новый, упрощенный синтаксис: ищем слово в ЛЮБОМ текстовом поле и фильтруем по тегу
+        # Escape special characters and add an asterisk for prefix search
+        # New, simplified syntax: search for the word in ANY text field and filter by tag
         escaped_query = query.replace("-", "\\-")
         redis_query = f"{escaped_query}~2"
 
         try:
-            # Выполняем поиск, не возвращая содержимое полей для эффективности
+            # Perform the search, not returning the content of the fields for efficiency
             search_results = await db.redis_client.execute_command(
                 "FT.SEARCH",
                 settings.VECTOR_INDEX_NAME,
@@ -415,28 +415,28 @@ class Post:
                 "NOCONTENT"
             )
         except Exception as e:
-            # В случае ошибки (например, индекс не создан) возвращаем пустой список
+            # In case of an error (e.g., the index is not created), return an empty list
             import logging
-            logging.error(f"Ошибка полнотекстового поиска: {e}", exc_info=True)
+            logging.error(f"Full-text search error: {e}", exc_info=True)
             return []
 
-        # Результат: [количество_результатов, doc_id_1, doc_id_2, ...]
+        # Result: [number_of_results, doc_id_1, doc_id_2, ...]
         if not search_results or search_results[0] == 0:
             return []
 
-        # Извлекаем ID постов из результата. Пропускаем первый элемент (количество).
-        # Ключи хранятся как bytes, их нужно декодировать.
-        # Документы хранятся с префиксом 'post:', который нужно удалить.
+        # Extract post IDs from the result. Skip the first element (the count).
+        # Keys are stored as bytes, they need to be decoded.
+        # Documents are stored with the prefix 'post:', which needs to be removed.
         post_ids = [
             doc_id.replace("vector:post:", "")
             for doc_id in search_results[1:] if isinstance(doc_id, str)
         ]
 
-        # Получаем полные данные постов по найденным ID
+        # Get the full post data by the found IDs
         posts = []
         for post_id in post_ids:
             post = await Post.get_by_id(post_id)
-            # Дополнительная проверка на случай рассинхронизации индекса и основной БД
+            # Additional check in case of desynchronization between the index and the main DB
             if post and post.status == PostStatus.PUBLISHED:
                 posts.append(post)
 
@@ -445,23 +445,23 @@ class Post:
     @staticmethod
     async def recreate_search_index():
         """
-        Пересоздает поисковый индекс и заново индексирует все опубликованные посты.
+        Recreates the search index and re-indexes all published posts.
         """
         import logging
         from services.redis_manager import vector_manager
         from services.vector_classifier import vector_classifier
 
-        logging.info("Начало пересоздания поискового индекса...")
+        logging.info("Starting search index recreation...")
 
-        # 1. Создаем индекс (метод create_index сам проверяет существование)
+        # 1. Create the index (the create_index method itself checks for existence)
         await vector_manager.create_index()
-        logging.info("Схема индекса успешно создана/проверена.")
+        logging.info("Index schema successfully created/verified.")
 
-        # 2. Получаем все опубликованные посты
+        # 2. Get all published posts
         all_post_ids = await db.zrevrange("posts:all", 0, -1)
-        logging.info(f"Найдено {len(all_post_ids)} постов для возможной переиндексации.")
+        logging.info(f"Found {len(all_post_ids)} posts for possible re-indexing.")
 
-        # 3. Перебираем и индексируем каждый пост
+        # 3. Iterate over and index each post
         indexed_count = 0
         for post_id_bytes in all_post_ids:
             post_id = post_id_bytes
@@ -469,13 +469,13 @@ class Post:
 
             if post and post.status == PostStatus.PUBLISHED:
                 try:
-                    # Убедимся, что классификатор инициализирован
+                    # Make sure the classifier is initialized
                     if not vector_classifier.is_initialized:
                         await vector_classifier.initialize()
 
                     post_vector = vector_classifier.create_vector(post.title, post.content, post.tags)
 
-                    # Добавляем в индекс
+                    # Add to the index
                     vector_doc_id = f"post:{post.id}"
                     await vector_manager.add_vector(
                         doc_id=vector_doc_id,
@@ -486,10 +486,10 @@ class Post:
                     )
                     indexed_count += 1
                 except Exception as e:
-                    logging.error(f"Ошибка при переиндексации поста {post.id}: {e}")
+                    logging.error(f"Error re-indexing post {post.id}: {e}")
 
-        logging.info(f"Переиндексация завершена. Успешно проиндексировано {indexed_count} постов.")
+        logging.info(f"Re-indexing complete. Successfully indexed {indexed_count} posts.")
 
 
-# Это нужно для обновления ссылок в Pydantic моделях после определения всех классов
+# This is needed to update the links in the Pydantic models after all classes have been defined
 PostResponse.model_rebuild()
