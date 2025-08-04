@@ -62,28 +62,36 @@ class VectorSpamClassifier:
     async def analyze_with_vectors(self, post_id: str, title: str, content: str,
                                   tags: List[str], author_id: str) -> Dict[str, Any]:
         """Анализ поста с использованием векторного поиска"""
+        logging.info(f"[АНАЛИЗ] Начало анализа спама для поста {post_id}.")
 
         # 1. Сначала проводим эвристический анализ
         heuristic_result = await spam_detector.analyze_post(post_id, title, content, tags, author_id)
+        logging.info(f"[АНАЛИЗ] Эвристика для {post_id}: score={heuristic_result.get('spam_score', 0.0):.2f}, причины: {heuristic_result.get('reasons')}")
 
         # 2. Создаем вектор поста
         post_vector = self.create_vector(title, content, tags)
+        logging.info(f"[АНАЛИЗ] Вектор для поста {post_id} создан.")
 
         # 3. Ищем похожие посты в векторной базе
         similar_posts = await vector_manager.search_similar(post_vector, k=9)
+        logging.info(f"[АНАЛИЗ] Найдено {len(similar_posts)} похожих документов для поста {post_id}.")
 
         # 4. Проводим голосование среди похожих постов
         vector_result = await self._classify_by_similarity(similar_posts)
+        logging.info(f"[АНАЛИЗ] Векторный анализ для {post_id}: prediction={vector_result.get('vector_prediction')}, confidence={vector_result.get('vector_confidence', 0.0):.2f}")
 
         # 5. Комбинируем результаты
         final_result = self._combine_results(heuristic_result, vector_result)
+        logging.info(f"[АНАЛИЗ] Итоговый результат для {post_id}: is_spam={final_result.get('is_spam')}, score={final_result.get('spam_score', 0.0):.2f}")
 
         # 6. Сохраняем вектор поста в базу (для обучения будущих классификаций)
         vector_doc_id = f"post:{post_id}"
         await vector_manager.add_vector(vector_doc_id, post_vector, title, content)
+        logging.info(f"[АНАЛИЗ] Вектор для поста {post_id} сохранен в Redis.")
 
         # 7. Сохраняем полный результат анализа
         await self._save_analysis_result(post_id, final_result, "post")
+        logging.info(f"[АНАЛИЗ] Полный результат анализа для поста {post_id} сохранен.")
 
         return final_result
 
