@@ -148,7 +148,7 @@ class DatabasePopulator:
                 # Устанавливаем случайную дату создания (от 30 до 365 дней назад)
                 days_ago = random.randint(30, 365)
                 creation_date = datetime.now() - timedelta(days=days_ago)
-                await db.hset(f"user:{user_id}", "created_at", creation_date.isoformat())
+                await db.hset(f"user:{user_id}", mapping={"created_at": creation_date.isoformat()})
 
                 logging.info(f"✓ Создан пользователь: {user_data['username']} (ID: {user_id})")
 
