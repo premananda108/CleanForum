@@ -7,13 +7,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function getSpamBadge(isSpam, spamScore) {
-    if (isSpam) {
-        return '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">SPAM</span>';
-    } else if (spamScore > 0.5) {
-        return '<span class="px-2 py-1 text-xs font-semibold text-black bg-yellow-400 rounded-full">Suspicious</span>';
-    } else if (spamScore > 0.3) {
+function getSpamBadge(entity) {
+    if (entity && entity.status === 'moderated') {
         return '<span class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-full">Verified</span>';
+    }
+    if (entity && entity.is_spam) {
+        return '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">SPAM</span>';
+    }
+    if (entity && entity.spam_score > 0.5) {
+        return '<span class="px-2 py-1 text-xs font-semibold text-black bg-yellow-400 rounded-full">Suspicious</span>';
     }
     return '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full">Clean</span>';
 }
@@ -80,7 +82,7 @@ async function loadModeratorPosts() {
                         </h6>
                         <p class="text-sm text-gray-600 mt-1">${post.content.substring(0, 100)}...</p>
                         <div class="mt-3 flex items-center space-x-2">
-                            ${getSpamBadge(post.is_spam, post.spam_score)}
+                            ${getSpamBadge(post)}
                             <span class="text-xs text-gray-500">Score: <strong>${(post.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>
@@ -160,7 +162,7 @@ async function loadModeratorComments() {
                             </a>
                         </p>
                         <div class="mt-3 flex items-center space-x-2">
-                            ${getSpamBadge(comment.is_spam, comment.spam_score)}
+                            ${getSpamBadge(comment)}
                             <span class="text-xs text-gray-500">Score: <strong>${(comment.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>
@@ -213,7 +215,7 @@ function displaySpamAnalysis(analysis) {
                             <a href="/posts/${neighbor.id}" target="_blank" class="text-blue-600 hover:underline">${neighbor.title || 'Comment without a title'}</a>
                             <div class="flex items-center justify-between mt-1">
                                 <!-- Use getSpamBadge for consistency -->
-                                ${getSpamBadge(neighbor.is_spam, neighbor.spam_score)}
+                                ${getSpamBadge(neighbor)}
                             </div>
                         </div>
                     `).join('')}
@@ -227,7 +229,7 @@ function displaySpamAnalysis(analysis) {
             <div class="bg-gray-50 p-4 rounded-lg">
                 <h6 class="font-bold text-gray-700 mb-2">Overall Score</h6>
                 <p class="text-gray-600">Spam score: <strong class="text-lg text-gray-900">${(analysis.spam_score * 100).toFixed(1)}%</strong></p>
-                <div class="mt-2">Status: ${getSpamBadge(analysis.is_spam, analysis.spam_score)}</div>
+                <div class="mt-2">Status: ${getSpamBadge(analysis)}</div>
             </div>
             <div class="bg-gray-50 p-4 rounded-lg">
                 <h6 class="font-bold text-gray-700 mb-2">Analysis Details</h6>

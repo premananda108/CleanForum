@@ -88,7 +88,6 @@ async def get_logs():
     except FileNotFoundError:
         return Response(content="Log file not found.", status_code=404, media_type="text/plain")
 
-
 @app.get("/")
 async def home(request: Request):
     """Home page"""

@@ -85,7 +85,7 @@ async def moderate_post(action: ModerationAction):
         raise HTTPException(status_code=404, detail="Post not found")
 
     if action.action == "approve":
-        await Post.mark_as_spam(action.entity_id, 0.0, False)
+        await Post.mark_as_spam(action.entity_id, 0.0, False, moderated=True)
         await vector_classifier.retrain_with_feedback(action.entity_id, "post", False, action.moderator_id)
         return {"message": "Post approved"}
     elif action.action == "mark_spam":
@@ -197,7 +197,7 @@ async def get_training_logs(limit: int = Query(100, le=500)):
         },
         {
             "timestamp": datetime.now().isoformat(),
-            "event": "Vector index created", 
+            "event": "Vector index created",
             "details": f"Created index with dimension 384"
         }
     ]
@@ -270,7 +270,7 @@ async def get_system_stats():
             "total_comments": total_comments,
             "spam_comments": spam_comments,
             "spam_percentage": round(spam_percentage, 2),
-            
+
             # System information
             "redis_version": redis_info.get("redis_version"),
             "used_memory": redis_info.get("used_memory_human"),
