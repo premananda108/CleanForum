@@ -18,9 +18,6 @@ Completely deletes all data from the Redis database.
 ### 3. `reindex_posts.py` - Re-index posts
 Recreates vector indexes for all existing posts.
 
-### 4. `drop_index.py` - Delete the search index
-Deletes only the vector search index.
-
 ## 🚀 Usage
 
 ### Initial Database Setup
@@ -41,11 +38,6 @@ Deletes only the vector search index.
 3. **Re-index existing posts:**
    ```bash
    python reindex_posts.py
-   ```
-
-4. **Delete only the search index:**
-   ```bash
-   python drop_index.py
    ```
 
 ## 📊 What `populate_database.py` Creates

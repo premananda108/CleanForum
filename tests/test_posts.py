@@ -87,7 +87,7 @@ async def test_create_post_success(setup_data, monkeypatch):
 
 @pytest.mark.asyncio
 async def test_create_post_is_spam(setup_data, monkeypatch):
-    """Test in which a post is identified as spam and should not be created."""
+    """Test that a post identified as spam is created with 'spam' status."""
     user_id, category_id = setup_data
 
     # Mock the spam analysis function to always return "spam"
@@ -108,11 +108,18 @@ async def test_create_post_is_spam(setup_data, monkeypatch):
     # Try to create the post
     post_id = await Post.create(post_data, author_id=user_id)
 
-    # Check that the post was NOT created (should return None)
-    assert post_id is None
+    # Check that the post was created
+    assert post_id is not None
 
     # Check that the mock was called
     mock_analyze.assert_called_once()
+
+    # Get the post from the DB and check its status
+    created_post = await Post.get_by_id(post_id)
+    assert created_post is not None
+    assert created_post.status == PostStatus.SPAM
+    assert created_post.is_spam is True
+    assert created_post.spam_score == 0.9
 
 
 @pytest.mark.asyncio
