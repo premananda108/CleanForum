@@ -32,7 +32,7 @@ A modern forum with an advanced spam protection system based on **FastAPI** and 
 
 ### Prerequisites
 - Python 3.8+
-- Redis 7.0+ with Vector Search support
+- Redis 8.0+ with Vector Search support
 - Docker (optional)
 
 ### 1. Cloning and Installing Dependencies
