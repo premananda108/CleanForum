@@ -1,5 +1,5 @@
 """
-Основное приложение FastAPI
+Main FastAPI Application
 """
 from fastapi import FastAPI, Request, Response
 from fastapi.templating import Jinja2Templates
@@ -16,46 +16,46 @@ from api import posts, comments, categories, moderator, search, users
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Управление жизненным циклом приложения"""
-    # Запуск
-    # Настраиваем логирование
+    """Application lifecycle management"""
+    # Startup
+    # Configure logging
     setup_logging()
-    logging.info(f"Запуск {settings.APP_NAME} v{settings.APP_VERSION}")
+    logging.info(f"Starting {settings.APP_NAME} v{settings.APP_VERSION}")
 
-    # Подключаемся к Redis
+    # Connect to Redis
     await db.connect()
 
-    # Инициализируем векторный классификатор
+    # Initialize the vector classifier
     await vector_classifier.initialize()
 
-    # Создаем категории по умолчанию, если их нет
+    # Create default categories if they don't exist
     from models.category import Category, CategoryCreate
     existing_categories = await Category.get_all()
     if not existing_categories:
-        print("Создаем категории по умолчанию")
+        print("Creating default categories")
         default_categories = [
-            CategoryCreate(name="Общие", description="Разговоры на любые темы"),
-            CategoryCreate(name="Технологии", description="Все о высоких технологиях"),
-            CategoryCreate(name="Флуд", description="Для несерьезных обсуждений")
+            CategoryCreate(name="General", description="Conversations on any topic"),
+            CategoryCreate(name="Technology", description="All about high-tech"),
+            CategoryCreate(name="Off-topic", description="For non-serious discussions")
         ]
         for cat_data in default_categories:
             await Category.create(cat_data)
 
     yield
 
-    # Завершение
-    logging.info("Завершение работы приложения")
+    # Shutdown
+    logging.info("Shutting down the application")
     await db.disconnect()
 
-# Создаем приложение
+# Create the application
 app = FastAPI(
     title=settings.APP_NAME,
     version=settings.APP_VERSION,
-    description="Современный форум с продвинутой защитой от спама",
+    description="A modern forum with advanced spam protection",
     lifespan=lifespan
 )
 
-# Настройка CORS
+# CORS setup
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -64,13 +64,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Подключаем статические файлы
+# Mount static files
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Настраиваем шаблоны
+# Configure templates
 templates = Jinja2Templates(directory="templates")
 
-# Подключаем роуты API
+# Include API routers
 app.include_router(posts.router, prefix="/api", tags=["posts"])
 app.include_router(comments.router, prefix="/api", tags=["comments"])
 app.include_router(categories.router, prefix="/api", tags=["categories"])
@@ -80,23 +80,22 @@ app.include_router(users.router, prefix="/api", tags=["users"])
 
 @app.get("/api/logs")
 async def get_logs():
-    """Отдает последние 100 строк лог-файла"""
+    """Returns the last 100 lines of the log file"""
     try:
         with open("logs/forum.log", "r", encoding="utf-8") as f:
             lines = f.readlines()[-100:]
         return Response(content="".join(lines), media_type="text/plain")
     except FileNotFoundError:
-        return Response(content="Лог-файл не найден.", status_code=404, media_type="text/plain")
-
+        return Response(content="Log file not found.", status_code=404, media_type="text/plain")
 
 @app.get("/")
 async def home(request: Request):
-    """Главная страница"""
+    """Home page"""
     return templates.TemplateResponse("index.html", {"request": request})
 
 @app.get("/posts/{post_id}")
 async def post_detail(request: Request, post_id: str):
-    """Страница поста"""
+    """Post page"""
     return templates.TemplateResponse("post_detail.html", {
         "request": request,
         "post_id": post_id
@@ -104,7 +103,7 @@ async def post_detail(request: Request, post_id: str):
 
 @app.get("/posts/{post_id}/edit")
 async def edit_post_page(request: Request, post_id: str):
-    """Страница редактирования поста"""
+    """Edit post page"""
     from models.post import Post
     post = await Post.get_by_id(post_id, increment_views=False)
     if not post:
@@ -114,22 +113,22 @@ async def edit_post_page(request: Request, post_id: str):
 
 @app.get("/create")
 async def create_post_page(request: Request):
-    """Страница создания поста"""
+    """Create post page"""
     return templates.TemplateResponse("create_post.html", {"request": request})
 
 @app.get("/moderator")
 async def moderator_panel_page(request: Request):
-    """Панель модератора"""
+    """Moderator panel"""
     return templates.TemplateResponse("moderator_panel.html", {"request": request})
 
 @app.get("/search")
 async def search_page(request: Request):
-    """Страница поиска"""
+    """Search page"""
     return templates.TemplateResponse("search_results.html", {"request": request})
 
 @app.get("/category/{category_id}")
 async def category_page(request: Request, category_id: str):
-    """Страница категории"""
+    """Category page"""
     from models.category import Category
     category = await Category.get_by_id(category_id)
     if not category:
@@ -141,7 +140,7 @@ async def category_page(request: Request, category_id: str):
 
 @app.get("/health")
 async def health_check():
-    """Проверка работоспособности"""
+    """Health check"""
     return {
         "status": "healthy",
         "app": settings.APP_NAME,

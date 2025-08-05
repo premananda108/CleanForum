@@ -1,5 +1,5 @@
 """
-API роуты для работы с постами
+API routes for working with posts
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
 import logging
@@ -12,10 +12,10 @@ import uuid
 
 router = APIRouter()
 
-# Временная функция для получения текущего пользователя
+# Temporary function to get the current user
 async def get_current_user_id() -> str:
-    """Временная заглушка для получения ID пользователя. Всегда возвращает одного и того же пользователя."""
-    # В реальном приложении здесь будет JWT авторизация
+    """Temporary stub to get the user ID. Always returns the same user."""
+    # In a real application, this would be JWT authorization
     return "user_demo_12345"
 
 @router.post("/posts", response_model=PostResponse)
@@ -23,44 +23,39 @@ async def create_post(
     post_data: PostCreate,
     current_user: str = Depends(get_current_user_id)
 ):
-    """Создать новый пост"""
-    logging.info(f"Попытка создания поста от пользователя {current_user}")
-    logging.debug(f"Данные поста: {post_data.model_dump_json(exclude={'content'})[:500]}")
+    """Create a new post"""
+    logging.info(f"Attempting to create a post from user {current_user}")
+    logging.debug(f"Post data: {post_data.model_dump_json(exclude={'content'})[:500]}")
 
-    # Проверяем существование категории
+    # Check if the category exists
     category = await Category.get_by_id(post_data.category_id)
     if not category:
-        logging.warning(f"Категория {post_data.category_id} не найдена.")
-        raise HTTPException(status_code=404, detail="Категория не найдена")
+        logging.warning(f"Category {post_data.category_id} not found.")
+        raise HTTPException(status_code=404, detail="Category not found")
 
     try:
         post_id = await Post.create(post_data, current_user)
-        if post_id is None:
-            logging.warning(f"Пост от {current_user} был отклонен как спам.")
-            raise HTTPException(
-                status_code=422,
-                detail="Ваш пост был определен как спам и не может быть опубликован."
-            )
-        
-        logging.info(f"Пост {post_id} успешно сохранен в БД.")
+        # post_id can no longer be None, the check has been removed.
+        # Spam posts are now saved with the 'spam' status.
+        logging.info(f"Post {post_id} saved to the DB successfully.")
 
     except HTTPException as e:
         raise e
     except Exception as e:
-        logging.error(f"Ошибка при создании поста в БД: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="Внутренняя ошибка при создании поста")
+        logging.error(f"Error creating post in the DB: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal error creating post")
 
-    # Получаем созданный пост
+    # Get the created post
     post = await Post.get_by_id(post_id, increment_views=False)
     if not post:
-        logging.error(f"Не удалось получить пост {post_id} после создания.")
-        raise HTTPException(status_code=500, detail="Ошибка получения поста после создания")
+        logging.error(f"Could not retrieve post {post_id} after creation.")
+        raise HTTPException(status_code=500, detail="Error retrieving post after creation")
 
-    # Обновляем счетчик постов в категории
+    # Update the post count in the category
     await Category.update_post_count(post_data.category_id, 1)
-    logging.info(f"Счетчик для категории {post_data.category_id} обновлен.")
+    logging.info(f"Post count for category {post_data.category_id} updated.")
 
-    logging.info(f"Пост {post_id} успешно обработан и возвращен клиенту.")
+    logging.info(f"Post {post_id} processed and returned to the client successfully.")
     return post
 
 @router.get("/posts", response_model=List[PostResponse])
@@ -69,7 +64,7 @@ async def get_posts(
     offset: int = Query(0, ge=0),
     category_id: Optional[str] = None
 ):
-    """Получить список постов"""
+    """Get a list of posts"""
 
     if category_id:
         posts = await Post.get_by_category(category_id, limit, offset)
@@ -80,13 +75,13 @@ async def get_posts(
 
 @router.get("/posts/{post_id}", response_model=PostResponse)
 async def get_post(post_id: str, increment_views: bool = True):
-    """Получить пост по ID"""
+    """Get a post by ID"""
 
     post = await Post.get_by_id(post_id, increment_views)
     if not post:
-        raise HTTPException(status_code=404, detail="Пост не найден")
+        raise HTTPException(status_code=404, detail="Post not found")
 
-    # Получаем похожие посты
+    # Get similar posts
     similar_posts = await Post.get_similar_posts(post_id)
     post.similar_posts = similar_posts
 
@@ -98,27 +93,28 @@ async def update_post(
     post_data: PostUpdate,
     current_user: str = Depends(get_current_user_id)
 ):
-    """Обновить пост"""
+    """Update a post"""
 
-    # Проверяем существование поста
+    # Check if the post exists
     existing_post = await Post.get_by_id(post_id)
     if not existing_post:
-        raise HTTPException(status_code=404, detail="Пост не найден")
+        raise HTTPException(status_code=404, detail="Post not found")
 
-    # Проверяем права на редактирование
+    # Check editing permissions
     if existing_post.author_id != current_user:
-        raise HTTPException(status_code=403, detail="У вас нет прав для редактирования этого поста")
+        raise HTTPException(status_code=403, detail="You do not have permission to edit this post")
 
-    # Обновляем пост
+    # Update the post
     success = await Post.update(post_id, post_data)
     if not success:
-        raise HTTPException(status_code=500, detail="Ошибка обновления поста")
+        raise HTTPException(status_code=500, detail="Error updating post")
 
-    # Если обновился контент или заголовок, повторно анализируем на спам
+    # If the content or title was updated, re-analyze for spam
     if post_data.content is not None or post_data.title is not None or post_data.tags is not None:
         updated_post = await Post.get_by_id(post_id, increment_views=False)
         if updated_post:
-            text_for_analysis = Post._extract_text_from_editorjs(updated_post.content_json or '')
+            # Now content is always Markdown
+            text_for_analysis = updated_post.content
             
             analysis_results = await vector_classifier.analyze_with_vectors(
                 post_id, 
@@ -129,17 +125,17 @@ async def update_post(
             )
 
             if analysis_results.get("is_spam", False):
-                # Если пост после редактирования стал спамом, он удаляется
+                # If the post becomes spam after editing, it is deleted
                 await Post.mark_as_deleted(post_id)
                 raise HTTPException(
                     status_code=422,
-                    detail="Ваш пост после редактирования был определен как спам и удален."
+                    detail="Your post was identified as spam after editing and has been deleted."
                 )
 
-    # Возвращаем обновленный пост
+    # Return the updated post
     post = await Post.get_by_id(post_id)
     if not post:
-        raise HTTPException(status_code=404, detail="Пост не найден после обновления")
+        raise HTTPException(status_code=404, detail="Post not found after update")
     
     return post
 
@@ -149,43 +145,43 @@ async def delete_post(
     current_user_id: str = Depends(get_current_user_id)
 ):
     """
-    Удалить пост. Доступно только автору поста.
+    Delete a post. Only available to the author of the post.
     """
-    logging.info(f"Попытка удаления поста {post_id} пользователем {current_user_id}")
+    logging.info(f"Attempting to delete post {post_id} by user {current_user_id}")
 
-    # 1. Проверяем существование поста
+    # 1. Check if the post exists
     existing_post = await Post.get_by_id(post_id, increment_views=False)
     if not existing_post:
-        logging.warning(f"Попытка удаления несуществующего поста {post_id}")
-        raise HTTPException(status_code=404, detail="Пост не найден")
+        logging.warning(f"Attempt to delete non-existent post {post_id}")
+        raise HTTPException(status_code=404, detail="Post not found")
 
-    # 2. Проверяем права на удаление
+    # 2. Check deletion permissions
     if existing_post.author_id != current_user_id:
-        logging.error(f"Пользователь {current_user_id} пытался удалить чужой пост {post_id} (автор: {existing_post.author_id})")
-        raise HTTPException(status_code=403, detail="У вас нет прав для удаления этого поста")
+        logging.error(f"User {current_user_id} tried to delete someone else's post {post_id} (author: {existing_post.author_id})")
+        raise HTTPException(status_code=403, detail="You do not have permission to delete this post")
 
-    # 3. Помечаем пост как удаленный
+    # 3. Mark the post as deleted
     success = await Post.mark_as_deleted(post_id)
     if not success:
-        # Эта ошибка может произойти, если пост был удален между get_by_id и mark_as_deleted
-        logging.error(f"Произошла ошибка при попытке пометить пост {post_id} как удаленный")
-        raise HTTPException(status_code=500, detail="Ошибка при удалении поста")
+        # This error can occur if the post was deleted between get_by_id and mark_as_deleted
+        logging.error(f"An error occurred while trying to mark post {post_id} as deleted")
+        raise HTTPException(status_code=500, detail="Error deleting post")
 
-    logging.info(f"Пост {post_id} успешно помечен как удаленный пользователем {current_user_id}")
+    logging.info(f"Post {post_id} successfully marked as deleted by user {current_user_id}")
     
-    # Возвращаем 204 No Content, как принято для DELETE запросов
+    # Return 204 No Content, as is customary for DELETE requests
     return
 
 @router.get("/posts/{post_id}/spam-analysis")
 async def get_spam_analysis(post_id: str):
-    """Получить результаты анализа спама для поста"""
+    """Get spam analysis results for a post"""
 
     from models.database import db
 
-    # Получаем анализ спама
+    # Get spam analysis
     analysis_data = await db.hgetall(f"vector_analysis:{post_id}")
     if not analysis_data:
-        raise HTTPException(status_code=404, detail="Анализ спама не найден")
+        raise HTTPException(status_code=404, detail="Spam analysis not found")
 
     return {
         "post_id": analysis_data.get("post_id"),

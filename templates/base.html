@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="ru" class="scroll-smooth">
+<html lang="en" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}CleanForum - Современный форум с защитой от спама{% endblock %}</title>
+    <title>{% block title %}CleanForum - Modern Forum with Spam Protection{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <script>
@@ -53,16 +53,16 @@
 
                 <div class="hidden md:flex items-center space-x-1">
                     <a href="/" class="px-4 py-2 rounded-lg text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all duration-200 font-medium">
-                        <i class="fas fa-home mr-2"></i>Главная
+                        <i class="fas fa-home mr-2"></i>Home
                     </a>
                     <a href="/create" class="px-4 py-2 rounded-lg text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all duration-200 font-medium">
-                        <i class="fas fa-plus mr-2"></i>Создать пост
+                        <i class="fas fa-plus mr-2"></i>Create Post
                     </a>
                     <a href="/search" class="px-4 py-2 rounded-lg text-gray-600 hover:text-green-600 hover:bg-green-50 transition-all duration-200 font-medium">
-                        <i class="fas fa-search mr-2"></i>Поиск
+                        <i class="fas fa-search mr-2"></i>Search
                     </a>
                     <a href="/moderator" class="px-4 py-2 rounded-lg bg-gradient-to-r from-green-500 to-yellow-500 text-white hover:shadow-lg transition-all duration-300 font-medium">
-                        <i class="fas fa-user-shield mr-2"></i>Модерация
+                        <i class="fas fa-user-shield mr-2"></i>Moderation
                     </a>
                 </div>
 
@@ -81,7 +81,7 @@
         {% block content %}{% endblock %}
     </main>
 
-    <!-- Подвал -->
+    <!-- Footer -->
     <footer class="bg-white border-t border-yellow-200 mt-16">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
             <div class="text-center">
@@ -102,6 +102,7 @@
     </footer>
 
     {% block scripts %}{% endblock %}
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script src="{{ url_for('static', path='js/forum.js') }}"></script>
 </body>
 </html>

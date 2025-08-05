@@ -1,5 +1,5 @@
 """
-Модель пользователя
+User model
 """
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -32,25 +32,25 @@ class UserResponse(BaseModel):
     is_active: bool = True
 
 class User:
-    """Класс для работы с пользователями в Redis"""
+    """Class for working with users in Redis"""
 
     @staticmethod
     async def create(user_data: UserCreate, role: UserRole = UserRole.USER) -> str:
-        """Создать нового пользователя"""
+        """Create a new user"""
         user_id = str(uuid.uuid4())
 
-        # Проверяем уникальность username и email
+        # Check for username and email uniqueness
         if await User.get_by_username(user_data.username):
-            raise ValueError("Пользователь с таким именем уже существует")
+            raise ValueError("A user with this name already exists")
 
         if await User.get_by_email(user_data.email):
-            raise ValueError("Пользователь с таким email уже существует")
+            raise ValueError("A user with this email already exists")
 
         user_info = {
             "id": user_id,
             "username": user_data.username,
             "email": user_data.email,
-            "password_hash": user_data.password,  # В реальном приложении хешировать!
+            "password_hash": user_data.password,  # In a real application, hash this!
             "role": role.value,
             "created_at": datetime.now().isoformat(),
             "post_count": 0,
@@ -59,10 +59,10 @@ class User:
             "is_active": True
         }
 
-        # Сохраняем пользователя
+        # Save the user
         await db.hset(f"user:{user_id}", user_info)
 
-        # Создаем индексы для поиска
+        # Create indexes for searching
         await db.set(f"username:{user_data.username}", user_id)
         await db.set(f"email:{user_data.email}", user_id)
 
@@ -70,7 +70,7 @@ class User:
 
     @staticmethod
     async def get_by_id(user_id: str) -> Optional[UserResponse]:
-        """Получить пользователя по ID"""
+        """Get a user by ID"""
         user_data = await db.hgetall(f"user:{user_id}")
         if not user_data:
             return None
@@ -89,7 +89,7 @@ class User:
 
     @staticmethod 
     async def get_by_username(username: str) -> Optional[UserResponse]:
-        """Получить пользователя по имени"""
+        """Get a user by name"""
         user_id = await db.get(f"username:{username}")
         if not user_id:
             return None
@@ -97,7 +97,7 @@ class User:
 
     @staticmethod
     async def get_by_email(email: str) -> Optional[UserResponse]:
-        """Получить пользователя по email"""
+        """Get a user by email"""
         user_id = await db.get(f"email:{email}")
         if not user_id:
             return None
@@ -106,7 +106,7 @@ class User:
     @staticmethod
     async def update_stats(user_id: str, post_count_delta: int = 0, 
                           comment_count_delta: int = 0, reputation_delta: int = 0):
-        """Обновить статистику пользователя"""
+        """Update user statistics"""
         user_data = await db.hgetall(f"user:{user_id}")
         if not user_data:
             return
@@ -123,7 +123,7 @@ class User:
 
     @staticmethod
     async def get_user_age_days(user_id: str) -> int:
-        """Получить возраст аккаунта в днях"""
+        """Get the account age in days"""
         user_data = await db.hgetall(f"user:{user_id}")
         if not user_data:
             return 0

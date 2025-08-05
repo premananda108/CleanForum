@@ -5,8 +5,8 @@ from pathlib import Path
 from config import settings
 
 def setup_logging():
-    """Настройка системы логирования."""
-    # Проверяем, были ли уже добавлены обработчики, чтобы избежать дублирования
+    """Logging system setup."""
+    # Check if handlers have already been added to avoid duplication
     if logging.getLogger().hasHandlers():
         return
 
@@ -14,11 +14,11 @@ def setup_logging():
         '%(asctime)s - %(levelname)s - %(name)s - %(module)s:%(lineno)d - %(message)s'
     )
     
-    # Создаем абсолютный путь к файлу лога
+    # Create an absolute path to the log file
     log_file_path = Path(settings.LOG_FILE)
-    log_file_path.parent.mkdir(parents=True, exist_ok=True) # Создаем директорию, если ее нет
+    log_file_path.parent.mkdir(parents=True, exist_ok=True) # Create the directory if it doesn't exist
 
-    # Настройка файлового обработчика с ротацией
+    # File handler setup with rotation
     file_handler = RotatingFileHandler(
         log_file_path,
         maxBytes=5*1024*1024,  # 5 MB
@@ -28,20 +28,20 @@ def setup_logging():
     file_handler.setFormatter(log_formatter)
     file_handler.setLevel(logging.INFO)
 
-    # Настройка консольного обработчика
+    # Console handler setup
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setFormatter(log_formatter)
     console_handler.setLevel(logging.DEBUG if settings.RELOAD else logging.INFO)
 
-    # Получаем корневой логгер и настраиваем его
+    # Get the root logger and configure it
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)
     root_logger.addHandler(file_handler)
     root_logger.addHandler(console_handler)
 
-    # Уменьшаем многословность от сторонних библиотек
+    # Reduce verbosity from third-party libraries
     logging.getLogger("uvicorn").setLevel(logging.WARNING)
     logging.getLogger("uvicorn.access").setLevel(logging.WARNING)
 
-    logging.info("Система логирования настроена.")
+    logging.info("Logging system configured.")
     logging.is_configured = True

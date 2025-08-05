@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Скрипт для быстрой проверки созданных данных в базе
+Script for a quick check of the data created in the database.
 """
 import asyncio
 import logging
@@ -10,103 +10,103 @@ from models.user import User
 from models.category import Category
 from services.redis_manager import vector_manager
 
-# Настройка логирования
+# Logging setup
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 
 async def check_database():
-    """Проверка содержимого базы данных"""
-    logging.info("🔍 Проверка содержимого базы данных")
+    """Checks the database content"""
+    logging.info("🔍 Checking database content")
     logging.info("=" * 50)
     
     await db.connect()
     
     try:
-        # Проверяем общие статистики
-        logging.info("📊 ОБЩАЯ СТАТИСТИКА:")
+        # Check general statistics
+        logging.info("📊 GENERAL STATISTICS:")
         
-        # Количество ключей в Redis
+        # Number of keys in Redis
         keys_count = await db.redis_client.dbsize()
-        logging.info(f"🗄️  Всего ключей в Redis: {keys_count}")
+        logging.info(f"🗄️  Total keys in Redis: {keys_count}")
         
-        # Статистика постов
+        # Post statistics
         total_posts = await Post.count_all()
         spam_posts = await Post.count_spam()
         published_posts = await Post.count_published()
         
-        logging.info(f"📝 Всего постов: {total_posts}")
-        logging.info(f"✅ Опубликованных: {published_posts}")
-        logging.info(f"🚫 Спам-постов: {spam_posts}")
+        logging.info(f"📝 Total posts: {total_posts}")
+        logging.info(f"✅ Published: {published_posts}")
+        logging.info(f"🚫 Spam posts: {spam_posts}")
         
-        # Проверяем пользователей
-        logging.info("\n👥 ПОЛЬЗОВАТЕЛИ:")
+        # Check users
+        logging.info("\n👥 USERS:")
         test_usernames = ["alice_blogger", "bob_writer", "charlie_spam", "diana_expert", "moderator_1"]
         
         for username in test_usernames:
             user = await User.get_by_username(username)
             if user:
-                logging.info(f"✓ {username} (ID: {user.id}, роль: {user.role.value}, постов: {user.post_count})")
+                logging.info(f"✓ {username} (ID: {user.id}, role: {user.role.value}, posts: {user.post_count})")
             else:
-                logging.warning(f"❌ {username} не найден")
+                logging.warning(f"❌ {username} not found")
         
-        # Проверяем категории
-        logging.info("\n📁 КАТЕГОРИИ:")
+        # Check categories
+        logging.info("\n📁 CATEGORIES:")
         categories = await Category.get_all()
         for category in categories:
             posts_in_category = len(await Post.get_by_category(category.id, limit=100))
-            logging.info(f"✓ {category.name} (ID: {category.id}, постов: {posts_in_category})")
+            logging.info(f"✓ {category.name} (ID: {category.id}, posts: {posts_in_category})")
         
-        # Проверяем последние посты
-        logging.info("\n📝 ПОСЛЕДНИЕ ПОСТЫ:")
+        # Check recent posts
+        logging.info("\n📝 RECENT POSTS:")
         recent_posts = await Post.get_all(limit=5)
         for i, post in enumerate(recent_posts, 1):
             status_emoji = "🚫" if post.status.value == "spam" else "✅"
-            logging.info(f"{i}. {status_emoji} '{post.title[:50]}...' (автор: {post.author_username}, статус: {post.status.value})")
+            logging.info(f"{i}. {status_emoji} '{post.title[:50]}...' (author: {post.author_username}, status: {post.status.value})")
         
-        # Проверяем векторный индекс
-        logging.info("\n🔍 ВЕКТОРНЫЙ ПОИСКОВЫЙ ИНДЕКС:")
+        # Check vector index
+        logging.info("\n🔍 VECTOR SEARCH INDEX:")
         try:
             await vector_manager.connect()
             index_info = await vector_manager.get_index_info()
             
             if index_info:
-                logging.info(f"✓ Индекс существует: {vector_manager.index_name}")
-                logging.info(f"📊 Векторов в индексе: {index_info.get('num_docs', 'N/A')}")
-                logging.info(f"💾 Размер индекса: {index_info.get('inverted_sz_mb', 'N/A')} MB")
+                logging.info(f"✓ Index exists: {vector_manager.index_name}")
+                logging.info(f"📊 Vectors in index: {index_info.get('num_docs', 'N/A')}")
+                logging.info(f"💾 Index size: {index_info.get('inverted_sz_mb', 'N/A')} MB")
             else:
-                logging.warning("❌ Векторный индекс не найден")
+                logging.warning("❌ Vector index not found")
                 
         except Exception as e:
-            logging.error(f"❌ Ошибка проверки векторного индекса: {e}")
+            logging.error(f"❌ Error checking vector index: {e}")
         
-        # Тестируем поиск
-        logging.info("\n🔎 ТЕСТИРОВАНИЕ ПОИСКА:")
+        # Test search
+        logging.info("\n🔎 TESTING SEARCH:")
         try:
-            search_results = await Post.search_by_text("заработок", limit=3)
-            logging.info(f"Поиск по слову 'заработок': найдено {len(search_results)} результатов")
+            search_results = await Post.search_by_text("money", limit=3)
+            logging.info(f"Search for 'money': found {len(search_results)} results")
             for result in search_results:
                 logging.info(f"  - '{result.title[:40]}...'")
         except Exception as e:
-            logging.error(f"❌ Ошибка тестирования поиска: {e}")
+            logging.error(f"❌ Error during search test: {e}")
         
         logging.info("\n" + "=" * 50)
-        logging.info("✅ Проверка базы данных завершена")
+        logging.info("✅ Database check finished")
         
     except Exception as e:
-        logging.error(f"❌ Ошибка при проверке базы: {e}", exc_info=True)
+        logging.error(f"❌ Error during database check: {e}", exc_info=True)
     finally:
         await db.disconnect()
 
 async def main():
-    """Главная функция"""
+    """Main function"""
     await check_database()
 
 if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        logging.info("❌ Проверка прервана пользователем")
+        logging.info("❌ Check interrupted by user")
     except Exception as e:
-        logging.error(f"❌ Критическая ошибка: {e}", exc_info=True)
+        logging.error(f"❌ Critical error: {e}", exc_info=True)

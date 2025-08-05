@@ -1,5 +1,5 @@
 """
-Векторный классификатор для определения спама с использованием SentenceTransformer
+Vector classifier for spam detection using SentenceTransformer
 """
 import numpy as np
 from typing import Dict, List, Any, Optional, Tuple
@@ -18,81 +18,89 @@ try:
     SENTENCE_TRANSFORMERS_AVAILABLE = True
 except ImportError:
     SENTENCE_TRANSFORMERS_AVAILABLE = False
-    print("⚠️ SentenceTransformers не установлен. Используется только эвристический анализ.")
+    print("⚠️ SentenceTransformers is not installed. Only heuristic analysis is used.")
 
 class VectorSpamClassifier:
-    """Классификатор спама на основе векторного поиска"""
+    """Spam classifier based on vector search"""
 
     def __init__(self):
         self.model = None
         self.is_initialized = False
 
     async def initialize(self):
-        """Инициализация модели"""
+        """Initialize the model"""
         if not SENTENCE_TRANSFORMERS_AVAILABLE:
-            logging.warning("SentenceTransformers не установлен. Векторная классификация недоступна.")
+            logging.warning("SentenceTransformers is not installed. Vector classification is not available.")
             return
 
         try:
-            logging.info("Загружаем модель SentenceTransformer...")
+            logging.info("Loading SentenceTransformer model...")
             self.model = SentenceTransformer('all-MiniLM-L6-v2')
             self.is_initialized = True
-            logging.info("Модель SentenceTransformer загружена успешно!")
+            logging.info("SentenceTransformer model loaded successfully!")
 
-            # Подключаемся к векторному менеджеру
+            # Connect to the vector manager
             await vector_manager.connect()
 
         except Exception as e:
-            logging.error(f"Ошибка загрузки модели SentenceTransformer: {e}", exc_info=True)
+            logging.error(f"Error loading SentenceTransformer model: {e}", exc_info=True)
             self.is_initialized = False
 
     def create_vector(self, title: str, content: str, tags: List[str]) -> np.ndarray:
-        """Создать вектор из текста поста"""
+        """Create a vector from the post text"""
         if not self.is_initialized:
-            # Возвращаем случайный вектор если модель не загружена
+            # Return a random vector if the model is not loaded
             return np.random.random(settings.VECTOR_DIM).astype(np.float32)
 
-        # Объединяем весь текст
+        # Combine all the text
         combined_text = f"{title}. {content}. Tags: {', '.join(tags)}"
 
-        # Создаем эмбеддинг
+        # Create the embedding
         vector = self.model.encode(combined_text)
         return vector.astype(np.float32)
 
     async def analyze_with_vectors(self, post_id: str, title: str, content: str,
                                   tags: List[str], author_id: str) -> Dict[str, Any]:
-        """Анализ поста с использованием векторного поиска"""
+        """Analyze a post using vector search"""
+        logging.info(f"[ANALYSIS] Starting spam analysis for post {post_id}.")
 
-        # 1. Сначала проводим эвристический анализ
+        # 1. First, perform heuristic analysis
         heuristic_result = await spam_detector.analyze_post(post_id, title, content, tags, author_id)
+        logging.info(f"[ANALYSIS] Heuristics for {post_id}: score={heuristic_result.get('spam_score', 0.0):.2f}, reasons: {heuristic_result.get('reasons')}")
 
-        # 2. Создаем вектор поста
+        # 2. Create the post vector
         post_vector = self.create_vector(title, content, tags)
+        logging.info(f"[ANALYSIS] Vector for post {post_id} created.")
 
-        # 3. Ищем похожие посты в векторной базе
+        # 3. Search for similar posts in the vector database
         similar_posts = await vector_manager.search_similar(post_vector, k=9)
+        logging.info(f"[ANALYSIS] Found {len(similar_posts)} similar documents for post {post_id}.")
 
-        # 4. Проводим голосование среди похожих постов
+        # 4. Conduct a vote among similar posts
         vector_result = await self._classify_by_similarity(similar_posts)
+        logging.info(f"[ANALYSIS] Vector analysis for {post_id}: prediction={vector_result.get('vector_prediction')}, confidence={vector_result.get('vector_confidence', 0.0):.2f}")
 
-        # 5. Комбинируем результаты
+        # 5. Combine the results
         final_result = self._combine_results(heuristic_result, vector_result)
+        logging.info(f"[ANALYSIS] Final result for {post_id}: is_spam={final_result.get('is_spam')}, score={final_result.get('spam_score', 0.0):.2f}")
 
-        # 6. Сохраняем вектор поста в базу (для обучения будущих классификаций)
+        # 6. Save the post vector to the database (for training future classifications)
         vector_doc_id = f"post:{post_id}"
         await vector_manager.add_vector(vector_doc_id, post_vector, title, content)
+        logging.info(f"[ANALYSIS] Vector for post {post_id} saved to Redis.")
 
-        # 7. Сохраняем полный результат анализа
+        # 7. Save the full analysis result
         await self._save_analysis_result(post_id, final_result, "post")
+        logging.info(f"[ANALYSIS] Full analysis result for post {post_id} saved.")
 
         return final_result
 
     async def _classify_by_similarity(self, similar_docs: List[Dict[str, Any]]) -> Dict[str, Any]:
         """
-        Классификация на основе голосования похожих документов.
-        Статус (спам/не спам) каждого соседа запрашивается из основной БД в реальном времени.
+        Classification based on voting of similar documents.
+        The status (spam/not spam) of each neighbor is requested from the main DB in real-time.
         """
-        from models.post import Post  # Избегаем циклического импорта
+        from models.post import Post  # Avoid circular import
         from models.comment import Comment
 
         if not similar_docs:
@@ -114,7 +122,7 @@ class VectorSpamClassifier:
             if not entity_id:
                 continue
 
-            # Получаем актуальный статус из основной базы данных
+            # Get the current status from the main database
             entity = await Post.get_by_id(entity_id) if is_post else await Comment.get_by_id(entity_id)
 
             if entity:
@@ -150,30 +158,30 @@ class VectorSpamClassifier:
         }
 
     def _combine_results(self, heuristic: Dict[str, Any], vector: Dict[str, Any]) -> Dict[str, Any]:
-        """Комбинирование результатов эвристического и векторного анализа"""
+        """Combine the results of heuristic and vector analysis"""
 
-        # Веса для комбинирования
-        heuristic_weight = 0.6  # Эвристический анализ более надежен для явного спама
-        vector_weight = 0.4     # Векторный анализ хорош для тонких различий
+        # Weights for combining
+        heuristic_weight = 0.6  # Heuristic analysis is more reliable for obvious spam
+        vector_weight = 0.4     # Vector analysis is good for subtle differences
 
-        # Получаем оценки
+        # Get the scores
         heuristic_score = heuristic.get("spam_score", 0.0)
 
-        # Векторная оценка
+        # Vector score
         vector_confidence = vector.get("vector_confidence", 0.0)
         vector_is_spam = vector.get("vector_prediction") == "spam"
         vector_score = vector_confidence if vector_is_spam else (1.0 - vector_confidence)
 
-        # Комбинированная оценка
+        # Combined score
         combined_score = (heuristic_score * heuristic_weight + vector_score * vector_weight)
 
-        # Итоговое решение
+        # Final decision
         is_spam = combined_score >= settings.SPAM_THRESHOLD
 
-        # Собираем причины
+        # Gather reasons
         reasons = heuristic.get("reasons", [])
         if vector.get("vector_prediction") == "spam" and vector.get("vector_confidence", 0) > 0.7:
-            reasons.append(f"Похож на известный спам (уверенность: {vector.get('vector_confidence', 0):.2f})")
+            reasons.append(f"Similar to known spam (confidence: {vector.get('vector_confidence', 0):.2f})")
 
         return {
             "spam_score": combined_score,
@@ -191,10 +199,10 @@ class VectorSpamClassifier:
         }
 
     async def _save_analysis_result(self, entity_id: str, result: Dict[str, Any], entity_type: str):
-        """Сохранить результат анализа (для поста или комментария)"""
+        """Save the analysis result (for a post or comment)"""
         analysis_key = f"vector_analysis:{entity_type}:{entity_id}"
 
-        # Конвертируем Pydantic модели в словари для JSON-сериализации
+        # Convert Pydantic models to dictionaries for JSON serialization
         neighbors_as_dicts = [neighbor.model_dump() for neighbor in result.get("neighbors", [])]
 
         analysis_data = {
@@ -208,42 +216,42 @@ class VectorSpamClassifier:
             "vector_confidence": result["vector_confidence"],
             "similar_posts_count": result["similar_posts_count"],
             "reasons": json.dumps(result.get("reasons", [])),
-            "neighbors": json.dumps(neighbors_as_dicts, default=str), # default=str для обработки datetime
+            "neighbors": json.dumps(neighbors_as_dicts, default=str), # default=str to handle datetime
             "analyzed_at": datetime.now().isoformat()
         }
         await db.hset(analysis_key, mapping=analysis_data)
 
     async def analyze_comment(self, comment_id: str, content: str, author_id: str) -> Dict[str, Any]:
-        """Анализ комментария с использованием векторного поиска."""
-        # 1. Эвристический анализ
+        """Analyze a comment using vector search."""
+        # 1. Heuristic analysis
         heuristic_result = await spam_detector.analyze_comment(comment_id, content, author_id)
 
-        # 2. Создаем вектор
-        comment_vector = self.create_vector("", content, []) # Нет заголовка и тегов
+        # 2. Create a vector
+        comment_vector = self.create_vector("", content, []) # No title or tags
 
-        # 3. Ищем похожие
+        # 3. Search for similar items
         similar_items = await vector_manager.search_similar(comment_vector, k=7)
 
-        # 4. Классифицируем
+        # 4. Classify
         vector_result = await self._classify_by_similarity(similar_items)
 
-        # 5. Комбинируем
+        # 5. Combine
         final_result = self._combine_results(heuristic_result, vector_result)
 
-        # 6. Сохраняем вектор
+        # 6. Save the vector
         vector_doc_id = f"comment:{comment_id}"
         await vector_manager.add_vector(vector_doc_id, comment_vector, content[:100], content)
 
-        # 7. Сохраняем результат анализа
+        # 7. Save the analysis result
         await self._save_analysis_result(comment_id, final_result, "comment")
 
         return final_result
 
     async def get_classification_stats(self) -> Dict[str, Any]:
-        """Получить статистику классификации"""
+        """Get classification statistics"""
 
         try:
-            # Получаем информацию о векторном индексе
+            # Get information about the vector index
             index_info = await vector_manager.get_index_info()
 
             return {
@@ -254,11 +262,20 @@ class VectorSpamClassifier:
                 "vector_dimension": settings.VECTOR_DIM
             }
         except Exception as e:
-            logging.error(f"Classifier: ошибка получения статистики: {e}")
+            logging.error(f"Classifier: error getting statistics: {e}")
             return {
                 "model_loaded": self.is_initialized,
                 "error": str(e)
             }
 
-# Глобальный экземпляр классификатора
+    async def retrain_with_feedback(self, entity_id: str, entity_type: str, is_spam: bool, moderator_id: str):
+        """
+        Record feedback for an entity and potentially trigger retraining.
+        In a real system, this would update the label in the vector DB.
+        """
+        logging.info(f"Feedback received for {entity_type} {entity_id}: is_spam={is_spam} by {moderator_id}")
+        # This is a stub. In a real application, you would update the vector's metadata.
+        pass
+
+# Global classifier instance
 vector_classifier = VectorSpamClassifier()

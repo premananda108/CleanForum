@@ -1,5 +1,5 @@
 """
-Модель категории
+Category model
 """
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -10,7 +10,7 @@ from models.database import db
 class CategoryCreate(BaseModel):
     name: str = Field(..., min_length=2, max_length=100)
     description: str = Field(..., max_length=500)
-    color: str = Field(default="#007bff")  # Bootstrap цвет по умолчанию
+    color: str = Field(default="#007bff")  # Default Bootstrap color
 
 class CategoryResponse(BaseModel):
     id: str
@@ -22,16 +22,16 @@ class CategoryResponse(BaseModel):
     is_active: bool = True
 
 class Category:
-    """Класс для работы с категориями"""
+    """Class for working with categories"""
 
     @staticmethod
     async def create(category_data: CategoryCreate) -> str:
-        """Создать новую категорию"""
+        """Create a new category"""
         category_id = str(uuid.uuid4())
 
-        # Проверяем уникальность имени
+        # Check for name uniqueness
         if await Category.get_by_name(category_data.name):
-            raise ValueError("Категория с таким названием уже существует")
+            raise ValueError("A category with this name already exists")
 
         category_info = {
             "id": category_id,
@@ -43,20 +43,20 @@ class Category:
             "is_active": True
         }
 
-        # Сохраняем категорию
+        # Save the category
         await db.hset(f"category:{category_id}", category_info)
 
-        # Создаем индекс для поиска по имени
+        # Create an index for searching by name
         await db.set(f"category_name:{category_data.name}", category_id)
 
-        # Добавляем в список всех категорий
+        # Add to the list of all categories
         await db.zadd("categories:all", {category_id: datetime.now().timestamp()})
 
         return category_id
 
     @staticmethod
     async def get_by_id(category_id: str) -> Optional[CategoryResponse]:
-        """Получить категорию по ID"""
+        """Get a category by ID"""
         category_data = await db.hgetall(f"category:{category_id}")
         if not category_data:
             return None
@@ -73,7 +73,7 @@ class Category:
 
     @staticmethod
     async def get_by_name(name: str) -> Optional[CategoryResponse]:
-        """Получить категорию по имени"""
+        """Get a category by name"""
         category_id = await db.get(f"category_name:{name}")
         if not category_id:
             return None
@@ -81,7 +81,7 @@ class Category:
 
     @staticmethod
     async def get_all() -> List[CategoryResponse]:
-        """Получить все активные категории"""
+        """Get all active categories"""
         category_ids = await db.zrevrange("categories:all")
         categories = []
 
@@ -94,7 +94,7 @@ class Category:
 
     @staticmethod
     async def update_post_count(category_id: str, delta: int = 1):
-        """Обновить количество постов в категории"""
+        """Update the number of posts in a category"""
         category_data = await db.hgetall(f"category:{category_id}")
         if not category_data:
             return

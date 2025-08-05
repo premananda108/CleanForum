@@ -1,130 +1,130 @@
 # CleanForum 🛡️
 
-Современный форум с продвинутой системой защиты от спама на базе **FastAPI** и **Redis Vector Search**.
+A modern forum with an advanced spam protection system based on **FastAPI** and **Redis Vector Search**.
 
-## 🚀 Особенности
+## 🚀 Features
 
-### 🔒 Продвинутая защита от спама
-- **Векторный анализ** с использованием SentenceTransformer (all-MiniLM-L6-v2)
-- **Эвристические алгоритмы** для обнаружения спам-паттернов
-- **Система обратной связи** для улучшения точности
-- **Redis Vector Sets** для быстрого поиска похожих постов
-- **k-NN классификация** с голосованием ближайших соседей
+### 🔒 Advanced Spam Protection
+- **Vector analysis** using SentenceTransformer (all-MiniLM-L6-v2)
+- **Heuristic algorithms** to detect spam patterns
+- **Feedback system** to improve accuracy
+- **Redis Vector Sets** for fast search of similar posts
+- **k-NN classification** with nearest neighbors voting
 
-### 🏗️ Технологический стек
+### 🏗️ Technology Stack
 - **Backend**: FastAPI, Python 3.8+
-- **База данных**: Redis 7.0+ с Vector Search
-- **ML модель**: SentenceTransformer
+- **Database**: Redis 7.0+ with Vector Search
+- **ML model**: SentenceTransformer
 - **Frontend**: Bootstrap 5, Vanilla JavaScript
-- **Шаблоны**: Jinja2
+- **Templates**: Jinja2
 
-### 📋 Функциональность
-- ✅ Создание и редактирование постов
-- ✅ Система комментариев
-- ✅ Категории и теги
-- ✅ Голосование и рейтинги
-- ✅ Панель модератора
-- ✅ Поиск по форуму
-- ✅ Автоматический анализ спама
-- ✅ Статистика и аналитика
+### 📋 Functionality
+- ✅ Create and edit posts
+- ✅ Comment system
+- ✅ Categories and tags
+- ✅ Voting and ratings
+- ✅ Moderator panel
+- ✅ Forum search
+- ✅ Automatic spam analysis
+- ✅ Statistics and analytics
 
-## 🛠️ Установка и запуск
+## 🛠️ Installation and Launch
 
-### Предварительные требования
+### Prerequisites
 - Python 3.8+
-- Redis 7.0+ с поддержкой Vector Search
-- Docker (опционально)
+- Redis 7.0+ with Vector Search support
+- Docker (optional)
 
-### 1. Клонирование и установка зависимостей
+### 1. Cloning and Installing Dependencies
 
 ```bash
-# Переходим в директорию проекта
+# Go to the project directory
 cd CleanForum
 
-# Создаем виртуальное окружение
+# Create a virtual environment
 python -m venv venv
 source venv/bin/activate  # Linux/Mac
-# или
+# or
 venv\Scripts\activate  # Windows
 
-# Устанавливаем зависимости
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Настройка Redis
+### 2. Setting up Redis
 
-#### Вариант 1: Docker
+#### Option 1: Docker
 ```bash
-# Запускаем Redis с Vector Search
+# Run Redis with Vector Search
 #docker run -d --name cleanforum -p 6379:6379 redis:8.0.3-bookworm
 docker-compose up -d
 ```
 
-#### Вариант 2: Локальная установка
-Установите Redis 
+#### Option 2: Local Installation
+Install Redis
 
-### 3. Настройка окружения
+### 3. Environment Configuration
 
 ```bash
-# Копируем пример конфигурации
+# Copy the example configuration
 cp .env.example .env
 
-# Редактируем .env файл
+# Edit the .env file
 REDIS_HOST=localhost
 REDIS_PORT=6379
 SECRET_KEY=your-secret-key-here
 ```
 
-### 4. Запуск приложения
+### 4. Running the Application
 
 ```bash
-# Запускаем сервер разработки
+# Run the development server
 cd app
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
-Форум будет доступен по адресу: http://localhost:8000
+The forum will be available at: http://localhost:8000
 
-## 🎯 Как работает антиспам система
+## 🎯 How the Anti-Spam System Works
 
-### 1. Эвристический анализ
-Система анализирует посты по следующим критериям:
-- **Спам-ключевые слова** (заработок, деньги, бесплатно, etc.)
-- **Подозрительные паттерны** (много заглавных букв, повторяющиеся символы)
-- **Возраст аккаунта** пользователя
-- **Структура текста** (длина, качество)
-- **Спам-домены** в ссылках
+### 1. Heuristic Analysis
+The system analyzes posts based on the following criteria:
+- **Spam keywords** (earnings, money, free, etc.)
+- **Suspicious patterns** (many capital letters, repeated characters)
+- **User account age**
+- **Text structure** (length, quality)
+- **Spam domains** in links
 
-### 2. Векторный анализ
-- Создание **384-мерных векторов** из текста поста
-- Поиск **k=9 ближайших соседей** в Redis Vector Sets
-- **Голосование** среди похожих постов
-- **k-NN классификация** с уверенностью
+### 2. Vector Analysis
+- Creation of **384-dimensional vectors** from the post text
+- Search for **k=9 nearest neighbors** in Redis Vector Sets
+- **Voting** among similar posts
+- **k-NN classification** with confidence
 
-### 3. Комбинированная оценка
+### 3. Combined Score
 ```python
 combined_score = heuristic_score * 0.6 + vector_score * 0.4
-is_spam = combined_score >= 0.7  # порог спама
+is_spam = combined_score >= 0.7  # spam threshold
 ```
 
-### 4. Система обратной связи
-- Модераторы могут **корректировать** решения системы
-- Обратная связь **сохраняется** для переобучения
-- **Автоматическое улучшение** точности модели
+### 4. Feedback System
+- Moderators can **correct** the system's decisions
+- Feedback is **saved** for retraining
+- **Automatic improvement** of model accuracy
 
-## 📊 Панель модератора
+## 📊 Moderator Panel
 
-Доступна по адресу: `/moderator`
+Available at: `/moderator`
 
-### Функции:
-- 📋 **Список подозрительных постов**
-- 📈 **Статистика обнаружения спама**
-- 🔍 **Детальный анализ** каждого поста
-- ✅ **Одобрение/блокировка** контента
-- 🧠 **Управление моделью** и переобучение
-- 📝 **Логи обучения** и feedback
+### Features:
+- 📋 **List of suspicious posts**
+- 📈 **Spam detection statistics**
+- 🔍 **Detailed analysis** of each post
+- ✅ **Approve/block** content
+- 🧠 **Model management** and retraining
+- 📝 **Training logs** and feedback
 
-## 🏗️ Архитектура
+## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
@@ -147,45 +147,45 @@ is_spam = combined_score >= 0.7  # порог спама
 ## 🔧 API Endpoints
 
 ### Posts
-- `GET /api/posts` - Список постов
-- `POST /api/posts` - Создать пост
-- `GET /api/posts/{id}` - Получить пост
-- `PUT /api/posts/{id}` - Обновить пост
-- `DELETE /api/posts/{id}` - Удалить пост
+- `GET /api/posts` - List of posts
+- `POST /api/posts` - Create a post
+- `GET /api/posts/{id}` - Get a post
+- `PUT /api/posts/{id}` - Update a post
+- `DELETE /api/posts/{id}` - Delete a post
 
-### Модерация
-- `GET /api/moderator/pending-posts` - Подозрительные посты
-- `POST /api/moderator/moderate` - Модерировать пост
-- `GET /api/moderator/spam-statistics` - Статистика
-- `GET /api/moderator/posts/{id}/analysis` - Анализ спама
+### Moderation
+- `GET /api/moderator/pending-posts` - Suspicious posts
+- `POST /api/moderator/moderate` - Moderate a post
+- `GET /api/moderator/spam-statistics` - Statistics
+- `GET /api/moderator/posts/{id}/analysis` - Spam analysis
 
-### Остальные
-- `GET /api/categories` - Категории
-- `GET /api/search` - Поиск
-- `POST /api/comments` - Комментарии
+### Others
+- `GET /api/categories` - Categories
+- `GET /api/search` - Search
+- `POST /api/comments` - Comments
 
-## 🧪 Тестирование системы
+## 🧪 System Testing
 
-### Создание тестовых данных
+### Creating Test Data
 ```python
-# Система автоматически загружает спам-датасет
-# Примеры спама для тестирования в spam_dataset.json
+# The system automatically loads the spam dataset
+# Spam examples for testing are in spam_dataset.json
 ```
 
-### Тестирование антиспама
-1. Создайте пост с спам-контентом (например, "Заработок $1000 в день!")
-2. Система автоматически проанализирует его
-3. Проверьте результат в панели модератора
-4. Дайте обратную связь для улучшения модели
+### Testing Anti-Spam
+1. Create a post with spam content (e.g., "Earn $1000 a day!")
+2. The system will automatically analyze it
+3. Check the result in the moderator panel
+4. Provide feedback to improve the model
 
-## 📈 Метрики системы
+## 📈 System Metrics
 
-- **Точность**: 96.4% после обучения на обратной связи
-- **Скорость анализа**: < 100ms на пост
-- **Ложные срабатывания**: < 1% после настройки
-- **Векторный поиск**: < 10ms в Redis
+- **Accuracy**: 96.4% after feedback training
+- **Analysis speed**: < 100ms per post
+- **False positives**: < 1% after tuning
+- **Vector search**: < 10ms in Redis
 
-## 🚀 Развертывание
+## 🚀 Deployment
 
 ### Docker Compose
 ```yaml
@@ -203,7 +203,7 @@ services:
       - "6379:6379"
 ```
 
-### Переменные окружения
+### Environment Variables
 ```env
 REDIS_HOST=redis
 REDIS_PORT=6379
@@ -213,25 +213,25 @@ SPAM_THRESHOLD=0.7
 MIN_USER_AGE_DAYS=7
 ```
 
-## 🤝 Вклад в проект
+## 🤝 Contribution
 
-1. Fork репозитория
-2. Создайте feature branch
-3. Внесите изменения
-4. Добавьте тесты
-5. Создайте Pull Request
+1. Fork the repository
+2. Create a feature branch
+3. Make changes
+4. Add tests
+5. Create a Pull Request
 
-## 📝 Лицензия
+## 📝 License
 
-MIT License. См. файл LICENSE для деталей.
+MIT License. See the LICENSE file for details.
 
-## 🙏 Благодарности
+## 🙏 Acknowledgments
 
-- **Redis** за Vector Search возможности
-- **SentenceTransformers** за предобученные модели
-- **FastAPI** за отличный фреймворк
-- **Bootstrap** за красивый UI
+- **Redis** for Vector Search capabilities
+- **SentenceTransformers** for pre-trained models
+- **FastAPI** for an excellent framework
+- **Bootstrap** for a beautiful UI
 
 ---
 
-**CleanForum** - современное решение для защиты от спама с использованием машинного обучения и векторного поиска! 🛡️✨
+**CleanForum** - a modern solution for spam protection using machine learning and vector search! 🛡️✨

@@ -1,5 +1,5 @@
 """
-Модель комментария
+Comment model
 """
 from pydantic import BaseModel, Field
 from typing import Optional, List
@@ -9,7 +9,7 @@ from enum import Enum
 from models.database import db
 
 class CommentStatus(str, Enum):
-    """Статус комментария"""
+    """Comment status"""
     PUBLISHED = "published"
     MODERATED = "moderated"
     SPAM = "spam"
@@ -36,18 +36,18 @@ class CommentResponse(BaseModel):
     status: CommentStatus
 
 class Comment:
-    """Класс для работы с комментариями"""
+    """Class for working with comments"""
 
     @staticmethod
     async def create(comment_data: CommentCreate, author_id: str) -> Optional[str]:
         """
-        Создать новый комментарий с немедленным анализом на спам.
-        Если комментарий определен как спам, он не сохраняется и возвращается None.
+        Create a new comment with immediate spam analysis.
+        If the comment is identified as spam, it is not saved and None is returned.
         """
         comment_id = str(uuid.uuid4())
         now = datetime.now()
 
-        # Проводим анализ, чтобы получить оценку спама
+        # Perform analysis to get a spam score
         from services.vector_classifier import vector_classifier
         analysis_results = await vector_classifier.analyze_comment(
             comment_id, comment_data.content, author_id
@@ -55,10 +55,10 @@ class Comment:
 
         is_spam = analysis_results.get("is_spam", False)
 
-        # Если комментарий - спам, не сохраняем его
+        # If the comment is spam, do not save it
         if is_spam:
             import logging
-            logging.warning(f"Комментарий от {author_id} к посту {comment_data.post_id} определен как спам и не будет сохранен.")
+            logging.warning(f"Comment from {author_id} on post {comment_data.post_id} was identified as spam and will not be saved.")
             return None
 
         spam_score = analysis_results.get("spam_score", 0.0)
@@ -72,19 +72,19 @@ class Comment:
             "created_at": now.isoformat(),
             "updated_at": now.isoformat(),
             "vote_score": 0,
-            "is_spam": str(is_spam), # будет всегда False
+            "is_spam": str(is_spam), # will always be False
             "spam_score": spam_score,
             "status": status.value
         }
 
-        # Сохраняем комментарий и его анализ в одной транзакции
+        # Save the comment and its analysis in a single transaction
         async with db.redis_client.pipeline(transaction=True) as pipe:
             pipe.hset(f"comment:{comment_id}", mapping=comment_info)
             timestamp = now.timestamp()
             pipe.zadd("comments:all", {comment_id: timestamp})
             pipe.zadd(f"comments:post:{comment_data.post_id}", {comment_id: timestamp})
             pipe.zadd(f"comments:author:{author_id}", {comment_id: timestamp})
-            # Обновляем счетчик комментариев в посте
+            # Update the comment counter in the post
             pipe.hincrby(f"post:{comment_data.post_id}", "comment_count", 1)
             await pipe.execute()
 
@@ -92,7 +92,7 @@ class Comment:
 
     @staticmethod
     async def get_by_id(comment_id: str) -> Optional[CommentResponse]:
-        """Получить комментарий по ID"""
+        """Get a comment by ID"""
         comment_data = await db.hgetall(f"comment:{comment_id}")
         if not comment_data:
             return None
@@ -116,7 +116,7 @@ class Comment:
 
     @staticmethod
     async def get_by_post(post_id: str, limit: int = 50, offset: int = 0) -> List[CommentResponse]:
-        """Получить комментарии к посту (только опубликованные)"""
+        """Get comments for a post (published only)"""
         comment_ids = await db.zrange(f"comments:post:{post_id}", offset, offset + limit - 1)
 
         comments = []
@@ -129,7 +129,7 @@ class Comment:
 
     @staticmethod
     async def get_all_for_moderation(limit: int = 50, offset: int = 0) -> List[CommentResponse]:
-        """Получить все комментарии для модерации, включая спам."""
+        """Get all comments for moderation, including spam."""
         comment_ids = await db.zrevrange("comments:all", offset, offset + limit - 1)
 
         comments = []
@@ -141,22 +141,22 @@ class Comment:
 
     @staticmethod
     async def update(comment_id: str, comment_data: CommentUpdate) -> bool:
-        """Обновить комментарий"""
+        """Update a comment"""
         update_fields = {
             "content": comment_data.content,
             "updated_at": datetime.now().isoformat(),
-            "status": CommentStatus.PUBLISHED.value, # Сбрасываем статус при обновлении
+            "status": CommentStatus.PUBLISHED.value, # Reset status on update
             "is_spam": str(False),
             "spam_score": 0.0
         }
         await db.hset(f"comment:{comment_id}", mapping=update_fields)
-        # Удаляем из спам-листа, если он там был
+        # Remove from spam list if it was there
         await db.srem("comments:spam", comment_id)
         return True
 
     @staticmethod
     async def mark_as_spam(comment_id: str, spam_score: float, is_spam: bool):
-        """Отметить комментарий как спам и обновить его статус."""
+        """Mark a comment as spam and update its status."""
         status = CommentStatus.SPAM if is_spam else CommentStatus.PUBLISHED
         await db.hset(f"comment:{comment_id}", mapping={
             "is_spam": str(is_spam),
@@ -171,10 +171,10 @@ class Comment:
 
     @staticmethod
     async def count_all() -> int:
-        """Подсчитать общее количество комментариев."""
+        """Count the total number of comments."""
         return await db.zcard("comments:all")
 
     @staticmethod
     async def count_spam() -> int:
-        """Подсчитать количество спам-комментариев."""
+        """Count the number of spam comments."""
         return await db.scard("comments:spam")

@@ -11,3 +11,5 @@ venv/
 
 /logs/
 /tests/logs/
+
+.env

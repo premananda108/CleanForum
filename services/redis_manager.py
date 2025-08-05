@@ -1,5 +1,5 @@
 """
-Redis менеджер для работы с Vector Sets
+Redis manager for working with Vector Sets
 """
 import redis.asyncio as redis
 import numpy as np
@@ -9,7 +9,7 @@ import logging
 from config import settings
 
 class RedisVectorManager:
-    """Менеджер для работы с Redis Vector Sets"""
+    """Manager for working with Redis Vector Sets"""
 
     def __init__(self):
         self.redis_client: Optional[redis.Redis] = None
@@ -17,34 +17,35 @@ class RedisVectorManager:
         self.vector_dim = settings.VECTOR_DIM
 
     async def connect(self):
-        """Подключение к Redis"""
+        """Connect to Redis"""
         self.redis_client = redis.Redis(
             host=settings.REDIS_HOST,
             port=settings.REDIS_PORT,
             db=settings.REDIS_DB,
+            username=settings.REDIS_USERNAME,
             password=settings.REDIS_PASSWORD,
-            decode_responses=False  # Важно! Для работы с бинарными данными
+            decode_responses=False  # Important! For working with binary data
         )
 
         await self.redis_client.ping()
-        logging.info("Vector Manager: успешно подключен к Redis.")
+        logging.info("Vector Manager: successfully connected to Redis.")
 
-        # Создаем индекс если его нет
+        # Create the index if it doesn't exist
         await self.create_index()
 
     async def disconnect(self):
-        """Отключение от Redis"""
+        """Disconnect from Redis"""
         if self.redis_client:
             await self.redis_client.aclose()
 
     async def create_index(self):
-        """Создать индекс для векторного поиска"""
+        """Create an index for vector search"""
         try:
-            # Проверяем, существует ли индекс
+            # Check if the index exists
             await self.redis_client.execute_command("FT.INFO", self.index_name)
-            logging.info(f"Индекс {self.index_name} уже существует")
+            logging.info(f"Index {self.index_name} already exists")
         except:
-            # Создаем новый индекс
+            # Create a new index
             schema = [
                 "vector", "VECTOR", "HNSW", "6",
                 "TYPE", "FLOAT32",
@@ -60,49 +61,49 @@ class RedisVectorManager:
                 "PREFIX", "2", "vector:post:", "vector:comment:",
                 "SCHEMA", *schema
             )
-            logging.info(f"Создан векторный индекс {self.index_name}")
+            logging.info(f"Created vector index {self.index_name}")
 
     async def add_vector(self, doc_id: str, vector: np.ndarray,
                         title: str, content: str) -> bool:
-        """Добавить вектор в индекс"""
+        """Add a vector to the index"""
         try:
             doc_key = f"vector:{doc_id}"
 
-            # Подготавливаем данные
+            # Prepare the data
             vector_bytes = vector.astype(np.float32).tobytes()
 
-            # Сохраняем документ
+            # Save the document
             await self.redis_client.hset(doc_key, mapping={
                 "vector": vector_bytes,
                 "title": title.encode('utf-8'),
-                "content": content[:500].encode('utf-8'),  # Ограничиваем и кодируем
+                "content": content[:500].encode('utf-8'),  # Limit and encode
                 "doc_id": doc_id.encode('utf-8')
             })
 
             return True
 
         except Exception as e:
-            logging.error(f"Vector Manager: ошибка добавления вектора {doc_id}: {e}")
+            logging.error(f"Vector Manager: error adding vector {doc_id}: {e}")
             return False
 
     async def search_similar(
         self, query_vector: np.ndarray, k: int = 9, pre_filter: Optional[Dict[str, str]] = None
     ) -> List[Dict[str, Any]]:
         """
-        Поиск похожих векторов с возможностью предварительной фильтрации.
-        pre_filter: Словарь для фильтрации, например, {"label": "published"}
+        Search for similar vectors with the possibility of pre-filtering.
+        pre_filter: Dictionary for filtering, e.g., {"label": "published"}
         """
         try:
             query_bytes = query_vector.astype(np.float32).tobytes()
 
-            # Формируем строку фильтра, если она есть
+            # Form the filter string if it exists
             filter_str = "*"
             if pre_filter:
-                # Пример: (@label:{published})
+                # Example: (@label:{published})
                 filter_parts = [f"(@{field}:{{{value}}})" for field, value in pre_filter.items()]
                 filter_str = "".join(filter_parts)
 
-            # Объединяем фильтр с KNN запросом
+            # Combine the filter with the KNN query
             query = f"{filter_str}=>[KNN {k} @vector $blob AS score]"
 
             logging.debug(f"Executing vector search query: {query}")
@@ -114,7 +115,7 @@ class RedisVectorManager:
                 "RETURN", "3", "score", "title", "doc_id"
             )
 
-            # Парсим результаты
+            # Parse the results
             parsed_results = []
             if len(results) > 1:
                 for i in range(1, len(results), 2):
@@ -129,15 +130,15 @@ class RedisVectorManager:
             return parsed_results
 
         except Exception as e:
-            logging.error(f"Vector Manager: ошибка поиска: {e}", exc_info=True)
+            logging.error(f"Vector Manager: search error: {e}", exc_info=True)
             return []
 
     async def get_index_info(self) -> Dict[str, Any]:
-        """Получить информацию об индексе"""
+        """Get information about the index"""
         try:
             info = await self.redis_client.execute_command("FT.INFO", self.index_name)
 
-            # Парсим информацию об индексе
+            # Parse the index information
             index_info = {}
             for i in range(0, len(info), 2):
                 if i + 1 < len(info):
@@ -150,34 +151,34 @@ class RedisVectorManager:
             return index_info
 
         except Exception as e:
-            logging.error(f"Vector Manager: ошибка получения информации об индексе: {e}")
+            logging.error(f"Vector Manager: error getting index information: {e}")
             return {}
 
     async def get_vector_by_id(self, doc_id: str) -> Optional[np.ndarray]:
-        """Получить вектор по ID документа"""
+        """Get a vector by document ID"""
         try:
             doc_key = f"vector:{doc_id}"
             vector_bytes = await self.redis_client.hget(doc_key, "vector")
 
             if not vector_bytes:
-                logging.warning(f"Vector Manager: вектор для {doc_id} не найден.")
+                logging.warning(f"Vector Manager: vector for {doc_id} not found.")
                 return None
 
             return np.frombuffer(vector_bytes, dtype=np.float32)
 
         except Exception as e:
-            logging.error(f"Vector Manager: ошибка получения вектора {doc_id}: {e}")
+            logging.error(f"Vector Manager: error getting vector {doc_id}: {e}")
             return None
 
     async def delete_vector(self, doc_id: str) -> bool:
-        """Удалить вектор из индекса"""
+        """Delete a vector from the index"""
         try:
             doc_key = f"vector:{doc_id}"
             await self.redis_client.delete(doc_key)
             return True
         except Exception as e:
-            logging.error(f"Vector Manager: ошибка удаления вектора {doc_id}: {e}")
+            logging.error(f"Vector Manager: error deleting vector {doc_id}: {e}")
             return False
 
-# Глобальный экземпляр менеджера
+# Global manager instance
 vector_manager = RedisVectorManager()

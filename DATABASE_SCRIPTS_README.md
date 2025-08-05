@@ -1,172 +1,173 @@
-# 🗄️ Скрипты управления базой данных
+# 🗄️ Database Management Scripts
 
-Этот набор скриптов предназначен для управления базой данных форума CleanForum.
+This set of scripts is intended for managing the CleanForum forum database.
 
-## 📋 Список скриптов
+## 📋 List of Scripts
 
-### 1. `populate_database.py` - Заполнение базы тестовыми данными
-Создает полный набор тестовых данных без проверки на спам:
-- 5 пользователей (включая модератора)
-- 5 категорий
-- Посты из `spam_dataset.json` (помечены как спам)
-- Дополнительные легитимные посты
-- Векторные индексы для поиска
+### 1. `populate_database.py` - Populate the database with test data
+Creates a full set of test data without spam checking:
+- 5 users (including a moderator)
+- 5 categories
+- Posts from `spam_dataset.json` (marked as spam)
+- Additional legitimate posts
+- Vector indexes for search
 
-### 2. `clear_database.py` - Очистка базы данных
-Полностью удаляет все данные из Redis базы данных.
+### 2. `clear_database.py` - Clear the database
+Completely deletes all data from the Redis database.
 
-### 3. `reindex_posts.py` - Переиндексация постов
-Пересоздает векторные индексы для всех существующих постов.
+### 3. `reindex_posts.py` - Re-index posts
+Recreates vector indexes for all existing posts.
 
-### 4. `drop_index.py` - Удаление поискового индекса
-Удаляет только векторный поисковый индекс.
+### 4. `drop_index.py` - Delete the search index
+Deletes only the vector search index.
 
-## 🚀 Использование
+## 🚀 Usage
 
-### Первоначальная настройка базы данных
+### Initial Database Setup
 
-1. **Очистка базы (если нужно начать заново):**
+1. **Clear the database (if you need to start over):**
    ```bash
    python clear_database.py
    ```
-   ⚠️ **ВНИМАНИЕ:** Удаляет ВСЕ данные!
+   ⚠️ **WARNING:** Deletes ALL data!
 
-2. **Заполнение тестовыми данными:**
+2. **Populate with test data:**
    ```bash
    python populate_database.py
    ```
 
-### Управление поисковыми индексами
+### Search Index Management
 
-3. **Переиндексация существующих постов:**
+3. **Re-index existing posts:**
    ```bash
    python reindex_posts.py
    ```
 
-4. **Удаление только поискового индекса:**
+4. **Delete only the search index:**
    ```bash
    python drop_index.py
    ```
 
-## 📊 Что создает populate_database.py
+## 📊 What `populate_database.py` Creates
 
-### Пользователи:
-- `alice_blogger` - обычный пользователь
-- `bob_writer` - обычный пользователь  
-- `charlie_spam` - пользователь-спаммер
-- `diana_expert` - эксперт
-- `moderator_1` - модератор
+### Users:
+- `alice_blogger` - regular user
+- `bob_writer` - regular user
+- `charlie_spam` - spammer user
+- `diana_expert` - expert
+- `moderator_1` - moderator
 
-### Категории:
-- Общие
-- Технологии
-- Финансы
-- Здоровье
-- Флуд
+### Categories:
+- General
+- Technology
+- Finance
+- Health
+- Flood
+- Spam
 
-### Посты:
-- 8 спам-постов из `spam_dataset.json`
-- 5 легитимных постов с полезным содержанием
-- Все посты имеют случайные даты создания (1-30 дней назад)
-- Создаются векторные индексы для поиска
+### Posts:
+- 8 spam posts from `spam_dataset.json`
+- 5 legitimate posts with useful content
+- All posts have random creation dates (1-30 days ago)
+- Vector indexes for search are created
 
-## 🔧 Особенности реализации
+## 🔧 Implementation Details
 
-### Обход проверки на спам
-Скрипт `populate_database.py` создает посты через специальный метод `create_post_without_spam_check()`, который:
-- Пропускает анализ векторным классификатором
-- Устанавливает статус поста напрямую
-- Создает векторные индексы для поиска
-- Обновляет все необходимые счетчики
+### Bypassing Spam Check
+The `populate_database.py` script creates posts using a special method `create_post_without_spam_check()`, which:
+- Skips analysis by the vector classifier
+- Sets the post status directly
+- Creates vector indexes for search
+- Updates all necessary counters
 
-### Логирование
-Все скрипты ведут подробное логирование операций:
-- ✅ Успешные операции
-- ❌ Ошибки с подробностями
-- 📊 Статистика созданных данных
+### Logging
+All scripts provide detailed logging of operations:
+- ✅ Successful operations
+- ❌ Errors with details
+- 📊 Statistics of created data
 
-### Безопасность
-- `clear_database.py` требует подтверждения "YES"
-- Все операции выполняются в try-catch блоках
-- Корректное закрытие соединений с базой
+### Security
+- `clear_database.py` requires "YES" confirmation
+- All operations are performed in try-catch blocks
+- Correct closing of database connections
 
-## 🎯 Примеры использования
+## 🎯 Usage Examples
 
-### Полный сброс и заполнение:
+### Full Reset and Population:
 ```bash
-# 1. Очистить базу
+# 1. Clear the database
 python clear_database.py
-# Введите "YES" при запросе
+# Enter "YES" when prompted
 
-# 2. Заполнить новыми данными
+# 2. Populate with new data
 python populate_database.py
 ```
 
-### Обновление только индексов:
+### Update Only Indexes:
 ```bash
-# Удалить индекс
+# Delete the index
 python drop_index.py
 
-# Пересоздать индекс
+# Recreate the index
 python reindex_posts.py
 ```
 
-## 📈 Результат выполнения
+## 📈 Execution Result
 
-После выполнения `populate_database.py` вы получите:
-- 5 пользователей с разными ролями
-- 5 категорий для постов
-- ~13 постов (8 спам + 5 легитимных)
-- Полностью настроенные векторные индексы
-- Корректные счетчики и статистику
+After running `populate_database.py`, you will get:
+- 5 users with different roles
+- 5 categories for posts
+- ~13 posts (8 spam + 5 legitimate)
+- Fully configured vector indexes
+- Correct counters and statistics
 
-### Пример вывода статистики:
+### Example Statistics Output:
 ```
-📊 Статистика созданных данных:
-👥 Пользователей: 5
-📁 Категорий: 5
-📝 Всего постов: 13
-🚫 Спам-постов: 8
-✅ Легитимных постов: 5
-🔍 Векторов в поисковом индексе: 13
+📊 Statistics of created data:
+👥 Users: 5
+📁 Categories: 5
+📝 Total posts: 13
+🚫 Spam posts: 8
+✅ Legitimate posts: 5
+🔍 Vectors in search index: 13
 ```
 
-## 🐛 Решение проблем
+## 🐛 Troubleshooting
 
-### Проблема: "Пользователь уже существует"
-Скрипт автоматически пропускает создание существующих пользователей и использует их ID.
+### Problem: "User already exists"
+The script automatically skips the creation of existing users and uses their IDs.
 
-### Проблема: "Векторный индекс не создается"
-1. Убедитесь, что Redis поддерживает RediSearch
-2. Проверьте установку sentence-transformers
-3. Проверьте настройки в `config.py`
+### Problem: "Vector index is not created"
+1. Make sure Redis supports RediSearch
+2. Check the installation of sentence-transformers
+3. Check the settings in `config.py`
 
-### Проблема: "Ошибка подключения к Redis"
-Проверьте настройки Redis в файле `.env`:
+### Problem: "Error connecting to Redis"
+Check the Redis settings in the `.env` file:
 ```
 REDIS_HOST=localhost
 REDIS_PORT=6379
 REDIS_DB=0
 ```
 
-## 📝 Логи и отладка
+## 📝 Logs and Debugging
 
-Все скрипты создают подробные логи в консоли. Для отладки можно изменить уровень логирования:
+All scripts create detailed logs in the console. For debugging, you can change the logging level:
 
 ```python
-logging.basicConfig(level=logging.DEBUG)  # Для детальной отладки
+logging.basicConfig(level=logging.DEBUG)  # For detailed debugging
 ```
 
-## ⚠️ Важные замечания
+## ⚠️ Important Notes
 
-1. **Безопасность:** Пароли пользователей хранятся в открытом виде для тестирования
-2. **Производительность:** Скрипт создает векторы синхронно - для больших объемов данных может быть медленным
-3. **Данные:** Все даты создания генерируются случайно в диапазоне 1-365 дней назад
-4. **Индексы:** Векторные индексы создаются автоматически при добавлении постов
+1. **Security:** User passwords are stored in plain text for testing purposes
+2. **Performance:** The script creates vectors synchronously - it may be slow for large amounts of data
+3. **Data:** All creation dates are generated randomly in the range of 1-365 days ago
+4. **Indexes:** Vector indexes are created automatically when adding posts
 
-## 🔗 Связанные файлы
+## 🔗 Related Files
 
-- `spam_dataset.json` - Исходные данные для спам-постов
-- `config.py` - Настройки приложения
-- `models/` - Модели данных
-- `services/` - Сервисы для работы с векторами и спам-детекцией
+- `spam_dataset.json` - Source data for spam posts
+- `config.py` - Application settings
+- `models/` - Data models
+- `services/` - Services for working with vectors and spam detection

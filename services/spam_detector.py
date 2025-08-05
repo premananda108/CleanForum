@@ -1,5 +1,5 @@
 """
-Система обнаружения спама с использованием эвристик и векторной классификации
+Spam detection system using heuristics and vector classification
 """
 from typing import Dict, List, Any, Optional
 import re
@@ -11,102 +11,98 @@ from models.database import db
 from models.user import User
 
 class SpamDetector:
-    """Эвристический детектор спама"""
+    """Heuristic spam detector"""
 
     def __init__(self):
-        # Ключевые слова спама
+        # Spam keywords
         self.spam_keywords = {
-            "money": ["заработок", "деньги", "доход", "прибыль", "income", "money", "earn", "$", "cryptocurrency", "bitcoin"],
-            "promotion": ["реклама", "продажа", "скидка", "акция", "sale", "discount", "promo", "buy now"],
-            "suspicious": ["бесплатно", "free", "win", "winner", "congratulations", "urgent", "срочно", "limited time"],
-            "links": ["http://", "https://", "www.", ".com", ".ru", "click here", "нажми", "ссылка"],
-            "scam": ["лохотрон", "развод", "scam", "fraud", "fake", "phishing"]
+            "money": ["earnings", "money", "income", "profit", "income", "money", "earn", "$", "cryptocurrency", "bitcoin"],
+            "promotion": ["advertisement", "sale", "discount", "promo", "sale", "discount", "promo", "buy now"],
+            "suspicious": ["free", "free", "win", "winner", "congratulations", "urgent", "urgent", "limited time"],
+            "scam": ["scam", "fraud", "scam", "fraud", "fake", "phishing"]
         }
 
-        # Регулярные выражения для поиска подозрительных паттернов
+        # Regular expressions for finding suspicious patterns
         self.suspicious_patterns = [
-            r'[0-9]+\s*[$€₽]\s*(в|в\s+день|в\s+месяц|per\s+day|per\s+month)',  # суммы денег
-            r'(зарабат|earn).{0,20}[0-9]+',  # заработок + числа
-            r'[A-Z]{3,}\s*[A-Z]{3,}',  # много заглавных букв подряд
-            r'[!]{3,}',  # много восклицательных знаков
-            r'[\s]{3,}',  # много пробелов
-            r'(.){4,}'  # повторяющиеся символы
+            r'[0-9]+\s*[$€₽]\s*(in|per\s+day|per\s+month)',  # sums of money
+            r'(earn).{0,20}[0-9]+',  # earnings + numbers
+            r'[!]{3,}',  # many exclamation marks
         ]
 
-    def calculate_spam_score(self, title: str, content: str, tags: List[str], 
+    def calculate_spam_score(self, title: str, content: str, tags: List[str],
                            author_id: str, user_age_days: int) -> Dict[str, Any]:
-        """Рассчитать оценку спама для поста"""
+        """Calculate the spam score for a post"""
 
         combined_text = f"{title} {content} {' '.join(tags)}".lower()
         score = 0.0
         reasons = []
 
-        # 1. Проверка ключевых слов спама
+        # 1. Check for spam keywords
         keyword_score = 0
         for category, keywords in self.spam_keywords.items():
             found_keywords = [kw for kw in keywords if kw in combined_text]
             if found_keywords:
                 category_score = len(found_keywords) * 0.2
                 keyword_score += category_score
-                reasons.append(f"Найдены спам-слова ({category}): {', '.join(found_keywords)}")
+                reasons.append(f"Found spam keywords ({category}): {', '.join(found_keywords)}")
 
-        score += min(keyword_score, 0.4)  # Максимум 40% за ключевые слова
+        score += min(keyword_score, 0.4)  # Maximum 40% for keywords
 
-        # 2. Проверка подозрительных паттернов
+        # 2. Check for suspicious patterns
         pattern_count = 0
         for pattern in self.suspicious_patterns:
             matches = re.findall(pattern, combined_text, re.IGNORECASE)
             if matches:
-                pattern_count += len(matches) 
-                reasons.append(f"Подозрительный паттерн: {pattern}")
+                pattern_count += len(matches)
+                reasons.append(f"Suspicious pattern: {pattern}")
 
         if pattern_count > 0:
-            pattern_score = min(pattern_count * 0.1, 0.25)  # Максимум 25%
+            pattern_score = min(pattern_count * 0.1, 0.25)  # Maximum 25%
             score += pattern_score
 
-        # 3. Анализ структуры текста
+        # 3. Analyze text structure
         if len(title) < 10:
             score += 0.1
-            reasons.append("Слишком короткий заголовок")
+            reasons.append("Title too short")
 
         if len(content) < 50:
             score += 0.15
-            reasons.append("Слишком короткий контент")
+            reasons.append("Content too short")
 
         if len(content) > 10000:
             score += 0.1
-            reasons.append("Слишком длинный контент")
+            reasons.append("Content too long")
 
-        # 4. Анализ заглавных букв
+        # 4. Analyze capital letters
         capital_ratio = sum(1 for c in combined_text if c.isupper()) / max(len(combined_text), 1)
         if capital_ratio > 0.3:
             score += 0.2
-            reasons.append(f"Слишком много заглавных букв ({capital_ratio:.1%})")
+            reasons.append(f"Too many capital letters ({capital_ratio:.1%})")
 
-        # 5. Анализ повторяющихся символов
-        repeated_chars = re.findall(r'(.)\1{3,}', combined_text)
-        if repeated_chars:
-            score += 0.1
-            reasons.append("Найдены повторяющиеся символы")
+        # 5. Analyze repeating characters (6+ in a row) - This check is now disabled
+        # repeated_chars = re.findall(r'(.)\1{5,}', combined_text)
+        # if repeated_chars:
+        #     score += 0.15
+        #     reasons.append("Found long sequences of repeating characters")
 
-        # 6. Анализ возраста пользователя
+        # 6. Analyze user age
         if user_age_days < settings.MIN_USER_AGE_DAYS:
             score += 0.3
-            reasons.append(f"Новый пользователь (возраст: {user_age_days} дней)")
+            reasons.append(f"New user (age: {user_age_days} days)")
 
-        # 7. Анализ тегов
+        # 7. Analyze tags
         if len(tags) > 8:
             score += 0.1
-            reasons.append(f"Слишком много тегов ({len(tags)})")
+            reasons.append(f"Too many tags ({len(tags)})")
 
-        # 8. Проверка на спам-домены
+        # 8. Check for spam domains
         spam_domains = ['bit.ly', 'tinyurl.com', 'goo.gl', 't.co']
         for domain in spam_domains:
             if domain in combined_text:
                 score += 0.2
-                reasons.append(f"Подозрительный домен: {domain}")
+                reasons.append(f"Suspicious domain: {domain}")
 
-        # Нормализуем оценку
+        # Normalize the score
         final_score = min(max(score, 0.0), 1.0)
         is_spam = final_score >= settings.SPAM_THRESHOLD
 
@@ -120,44 +116,44 @@ class SpamDetector:
         }
 
     def calculate_comment_spam_score(self, content: str, author_id: str, user_age_days: int) -> Dict[str, Any]:
-        """Рассчитать оценку спама для комментария (упрощенная версия)"""
+        """Calculate the spam score for a comment (simplified version)"""
         text = content.lower()
         score = 0.0
         reasons = []
 
-        # 1. Ключевые слова
+        # 1. Keywords
         keyword_score = 0
         for category, keywords in self.spam_keywords.items():
             found = [kw for kw in keywords if kw in text]
             if found:
                 keyword_score += len(found) * 0.25
-                reasons.append(f"Найдены спам-слова ({category}): {', '.join(found)}")
+                reasons.append(f"Found spam keywords ({category}): {', '.join(found)}")
         score += min(keyword_score, 0.5)
 
-        # 2. Паттерны
+        # 2. Patterns
         pattern_count = sum(1 for pattern in self.suspicious_patterns if re.search(pattern, text))
         if pattern_count > 0:
             score += min(pattern_count * 0.15, 0.3)
-            reasons.append(f"Найдено {pattern_count} подозрительных паттернов")
+            reasons.append(f"Found {pattern_count} suspicious patterns")
 
-        # 3. Структура
+        # 3. Structure
         if len(content) < 15:
             score += 0.15
-            reasons.append("Слишком короткий комментарий")
+            reasons.append("Comment too short")
         if len(content) > 2000:
             score += 0.1
-            reasons.append("Слишком длинный комментарий")
+            reasons.append("Comment too long")
 
-        # 4. Заглавные буквы
+        # 4. Capital letters
         capital_ratio = sum(1 for c in content if c.isupper()) / max(len(content), 1)
         if capital_ratio > 0.4:
             score += 0.25
-            reasons.append(f"Слишком много заглавных букв ({capital_ratio:.1%})")
+            reasons.append(f"Too many capital letters ({capital_ratio:.1%})")
 
-        # 5. Возраст пользователя
+        # 5. User age
         if user_age_days < settings.MIN_USER_AGE_DAYS:
             score += 0.3
-            reasons.append(f"Новый пользователь (возраст: {user_age_days} дней)")
+            reasons.append(f"New user (age: {user_age_days} days)")
 
         final_score = min(max(score, 0.0), 1.0)
         return {
@@ -169,13 +165,13 @@ class SpamDetector:
 
     async def analyze_post(self, post_id: str, title: str, content: str,
                           tags: List[str], author_id: str) -> Dict[str, Any]:
-        """Анализировать пост на спам"""
-        logging.info(f"Запуск эвристического анализа для поста {post_id}")
+        """Analyze a post for spam"""
+        logging.info(f"Starting heuristic analysis for post {post_id}")
         user_age_days = await User.get_user_age_days(author_id)
         result = self.calculate_spam_score(title, content, tags, author_id, user_age_days)
-        logging.info(f"Эвристический анализ для поста {post_id} завершен. Оценка: {result['spam_score']:.2f}")
+        logging.info(f"Heuristic analysis for post {post_id} complete. Score: {result['spam_score']:.2f}")
 
-        # Сохраняем результат
+        # Save the result
         analysis_key = f"spam_analysis:post:{post_id}"
         await db.hset(analysis_key, {
             "entity_id": post_id, "type": "post", "author_id": author_id,
@@ -185,13 +181,13 @@ class SpamDetector:
         return result
 
     async def analyze_comment(self, comment_id: str, content: str, author_id: str) -> Dict[str, Any]:
-        """Анализировать комментарий на спам"""
-        logging.info(f"Запуск эвристического анализа для комментария {comment_id}")
+        """Analyze a comment for spam"""
+        logging.info(f"Starting heuristic analysis for comment {comment_id}")
         user_age_days = await User.get_user_age_days(author_id)
         result = self.calculate_comment_spam_score(content, author_id, user_age_days)
-        logging.info(f"Эвристический анализ для комментария {comment_id} завершен. Оценка: {result['spam_score']:.2f}")
+        logging.info(f"Heuristic analysis for comment {comment_id} complete. Score: {result['spam_score']:.2f}")
 
-        # Сохраняем результат
+        # Save the result
         analysis_key = f"spam_analysis:comment:{comment_id}"
         await db.hset(analysis_key, {
             "entity_id": comment_id, "type": "comment", "author_id": author_id,
@@ -201,15 +197,15 @@ class SpamDetector:
         return result
 
     async def get_spam_statistics(self) -> Dict[str, Any]:
-        """Получить статистику спама"""
-        # В реальном приложении можно использовать более сложные запросы Redis
+        """Get spam statistics"""
+        # In a real application, more complex Redis queries could be used
         return {
-            "total_analyzed": 0,  # Заглушка
+            "total_analyzed": 0,  # Stub
             "spam_detected": 0,
             "accuracy": 0.0,
             "false_positives": 0,
             "false_negatives": 0
         }
 
-# Глобальный экземпляр детектора
+# Global detector instance
 spam_detector = SpamDetector()

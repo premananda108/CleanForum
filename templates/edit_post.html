@@ -1,16 +1,16 @@
 {% extends "base.html" %}
 
-{% block title %}Редактировать пост - CleanForum{% endblock %}
+{% block title %}Edit Post - CleanForum{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto">
-    <!-- Hero секция -->
+    <!-- Hero Section -->
     <div class="text-center mb-8">
         <div class="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-500 to-teal-600 rounded-2xl mb-4">
             <i class="fas fa-pencil-alt text-white text-2xl"></i>
         </div>
-        <h1 class="text-4xl font-bold text-gray-800 mb-2">Редактировать пост</h1>
-        <p class="text-xl text-gray-600">Внесите изменения и сохраните их</p>
+        <h1 class="text-4xl font-bold text-gray-800 mb-2">Edit Post</h1>
+        <p class="text-xl text-gray-600">Make your changes and save them</p>
     </div>
 
     <div class="bg-white rounded-2xl shadow-xl overflow-hidden">
@@ -18,36 +18,44 @@
 
         <div class="p-8">
             <form id="edit-post-form" class="space-y-6">
-                <!-- Заголовок -->
+                <!-- Title -->
                 <div class="space-y-2">
-                    <label for="post-title" class="block text-sm font-semibold text-gray-700">Заголовок</label>
+                    <label for="post-title" class="block text-sm font-semibold text-gray-700">Title</label>
                     <input type="text" id="post-title" required minlength="5" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-50 focus:border-green-500 transition-all">
                 </div>
 
-                <!-- Содержание -->
+                <!-- Content -->
                 <div class="space-y-2">
-                    <label class="block text-sm font-semibold text-gray-700">Содержание</label>
-                    <div id="editorjs" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus-within:ring-4 focus-within:ring-green-50 focus-within:border-green-500 transition-all"></div>
+                    <label for="post-content" class="block text-sm font-semibold text-gray-700">
+                        Content (Markdown supported)
+                    </label>
+                    <textarea
+                        id="post-content"
+                        required
+                        minlength="10"
+                        rows="12"
+                        class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-green-50 focus:border-green-500 transition-all"
+                    ></textarea>
                 </div>
 
-                <!-- Категория и теги -->
+                <!-- Category and Tags -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                     <div class="space-y-2">
-                        <label for="post-category" class="block text-sm font-semibold text-gray-700">Категория</label>
+                        <label for="post-category" class="block text-sm font-semibold text-gray-700">Category</label>
                         <select id="post-category" required class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-purple-50 focus:border-purple-500 transition-all"></select>
                     </div>
                     <div class="space-y-2">
-                        <label for="post-tags" class="block text-sm font-semibold text-gray-700">Теги</label>
-                        <input type="text" id="post-tags" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-50 focus:border-orange-500 transition-all" placeholder="через запятую">
+                        <label for="post-tags" class="block text-sm font-semibold text-gray-700">Tags</label>
+                        <input type="text" id="post-tags" class="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-4 focus:ring-orange-50 focus:border-orange-500 transition-all" placeholder="comma-separated">
                     </div>
                 </div>
 
-                <!-- Кнопка отправки -->
+                <!-- Submit Button -->
                 <div class="flex items-center justify-between pt-4 border-t border-gray-100">
-                    <a href="/posts/{{ post.id }}" class="text-gray-500 hover:text-gray-700 transition-colors">Отмена</a>
+                    <a href="/posts/{{ post.id }}" class="text-gray-500 hover:text-gray-700 transition-colors">Cancel</a>
                     <button type="submit" class="bg-gradient-to-r from-green-500 to-teal-600 text-white px-8 py-3 rounded-xl font-semibold hover:shadow-lg transform hover:scale-105 transition-all duration-300">
                         <i class="fas fa-save mr-2"></i>
-                        Сохранить изменения
+                        Save Changes
                     </button>
                 </div>
             </form>
@@ -58,24 +66,12 @@
 
 {% block scripts %}
 {{ super() }}
-<!-- Editor.js and tools -->
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@latest"></script>
-<script src="https://cdn.jsdelivr.net/npm/@editorjs/paragraph@latest"></script>
-
+<!-- Scripts for Editor.js removed -->
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const postId = '{{ post.id }}';
-        // Вызываем новую функцию инициализации со страницы forum.js
-        if (typeof initEditPostPage === 'function') {
-            initEditPostPage(postId);
-        } else {
-            console.error('Функция initEditPostPage не найдена. Убедитесь, что forum.js загружен.');
-            // showAlert('Произошла ошибка при загрузке редактора.', 'danger');
-        }
+        // Fill form fields with post data
+        // This logic will be moved to forum.js for unification
     });
 </script>
 {% endblock %}
