@@ -130,7 +130,7 @@ Available at: `/moderator`
 ┌─────────────────┐    ┌──────────────────┐    ┌─────────────────┐
 │   Frontend      │    │    FastAPI       │    │     Redis       │
 │                 │    │                  │    │                 │
-│ • Bootstrap 5   │◄──►│ • API Routes     │◄──►│ • Vector Sets   │
+│ • Tailwind CSS  │◄──►│ • API Routes     │◄──►│ • Vector Sets   │
 │ • JavaScript    │    │ • Business Logic │    │ • Hash Storage  │
 │ • Jinja2        │    │ • Spam Detection │    │ • Sorted Sets   │
 └─────────────────┘    └──────────────────┘    └─────────────────┘
