@@ -56,12 +56,21 @@ async def get_post_analysis(post_id: str):
 
     # Get the neighbors used in the analysis
     neighbors_json = analysis_data.get("neighbors", "[]")
+    neighbors = []
     try:
         neighbors_data = json.loads(neighbors_json)
-        # Pydantic automatically validates and converts dictionaries to PostResponse
-        neighbors = [PostResponse(**data) for data in neighbors_data]
-    except (json.JSONDecodeError, TypeError):
-        neighbors = []
+        logging.info(f"Loaded {len(neighbors_data)} neighbors from cache for post {post_id}")
+        for neighbor_data in neighbors_data:
+            neighbor_id = neighbor_data.get("id")
+            if neighbor_id:
+                # Fetch the full post object to ensure all fields are present
+                full_neighbor = await Post.get_by_id(neighbor_id)
+                if full_neighbor:
+                    neighbors.append(full_neighbor)
+                else:
+                    logging.warning(f"Could not fetch full data for neighbor post {neighbor_id}")
+    except (json.JSONDecodeError, TypeError) as e:
+        logging.error(f"Error decoding neighbor data for post {post_id}: {e}")
 
     return SpamAnalysisResponse(
         entity_id=analysis_data.get("entity_id"),
