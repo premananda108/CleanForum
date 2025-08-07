@@ -40,6 +40,9 @@ A modern forum with an advanced spam protection system based on **FastAPI** and 
 - Docker (optional)
 
 ### 1. Cloning and Installing Dependencies
+```bash
+git clone https://github.com/premananda108/CleanForum.git
+```
 
 ```bash
 # Go to the project directory
