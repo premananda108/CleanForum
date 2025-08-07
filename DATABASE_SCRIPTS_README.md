@@ -58,8 +58,8 @@ Recreates vector indexes for all existing posts.
 - Spam
 
 ### Posts:
-- 8 spam posts from `spam_dataset.json`
-- 5 legitimate posts with useful content
+- 25 spam posts from `spam_dataset.json`
+- 25 legitimate posts with useful content
 - All posts have random creation dates (1-30 days ago)
 - Vector indexes for search are created
 
