@@ -5,6 +5,7 @@ A modern forum with an advanced spam protection system based on **FastAPI** and 
 ## 🚀 Features
 
 ### 🔒 Advanced Spam Protection
+
 - **Vector analysis** using SentenceTransformer (all-MiniLM-L6-v2)
 - **Heuristic algorithms** to detect spam patterns
 - **Feedback system** to improve accuracy
@@ -12,13 +13,15 @@ A modern forum with an advanced spam protection system based on **FastAPI** and 
 - **k-NN classification** with nearest neighbors voting
 
 ### 🏗️ Technology Stack
+
 - **Backend**: FastAPI, Python 3.8+
 - **Database**: Redis 7.0+ with Vector Search
 - **ML model**: SentenceTransformer
-- **Frontend**: Bootstrap 5, Vanilla JavaScript
+- **Frontend**: Tailwind CSS, Vanilla JavaScript
 - **Templates**: Jinja2
 
 ### 📋 Functionality
+
 - ✅ Create and edit posts
 - ✅ Comment system
 - ✅ Categories and tags
@@ -31,6 +34,7 @@ A modern forum with an advanced spam protection system based on **FastAPI** and 
 ## 🛠️ Installation and Launch
 
 ### Prerequisites
+
 - Python 3.8+
 - Redis 8.0+ with Vector Search support
 - Docker (optional)
@@ -54,6 +58,7 @@ pip install -r requirements.txt
 ### 2. Setting up Redis
 
 #### Option 1: Docker
+
 ```bash
 # Run Redis with Vector Search
 #docker run -d --name cleanforum -p 6379:6379 redis:8.0.3-bookworm
@@ -61,6 +66,7 @@ docker-compose up -d
 ```
 
 #### Option 2: Local Installation
+
 Install Redis
 
 ### 3. Environment Configuration
@@ -88,7 +94,9 @@ The forum will be available at: http://localhost:8000
 ## 🎯 How the Anti-Spam System Works
 
 ### 1. Heuristic Analysis
+
 The system analyzes posts based on the following criteria:
+
 - **Spam keywords** (earnings, money, free, etc.)
 - **Suspicious patterns** (many capital letters, repeated characters)
 - **User account age**
@@ -96,18 +104,21 @@ The system analyzes posts based on the following criteria:
 - **Spam domains** in links
 
 ### 2. Vector Analysis
+
 - Creation of **384-dimensional vectors** from the post text
 - Search for **k=9 nearest neighbors** in Redis Vector Sets
 - **Voting** among similar posts
 - **k-NN classification** with confidence
 
 ### 3. Combined Score
+
 ```python
 combined_score = heuristic_score * 0.6 + vector_score * 0.4
 is_spam = combined_score >= 0.7  # spam threshold
 ```
 
 ### 4. Feedback System
+
 - Moderators can **correct** the system's decisions
 - Feedback is **saved** for retraining
 - **Automatic improvement** of model accuracy
@@ -117,6 +128,7 @@ is_spam = combined_score >= 0.7  # spam threshold
 Available at: `/moderator`
 
 ### Features:
+
 - 📋 **List of suspicious posts**
 - 📈 **Spam detection statistics**
 - 🔍 **Detailed analysis** of each post
@@ -147,6 +159,7 @@ Available at: `/moderator`
 ## 🔧 API Endpoints
 
 ### Posts
+
 - `GET /api/posts` - List of posts
 - `POST /api/posts` - Create a post
 - `GET /api/posts/{id}` - Get a post
@@ -154,12 +167,14 @@ Available at: `/moderator`
 - `DELETE /api/posts/{id}` - Delete a post
 
 ### Moderation
+
 - `GET /api/moderator/pending-posts` - Suspicious posts
 - `POST /api/moderator/moderate` - Moderate a post
 - `GET /api/moderator/spam-statistics` - Statistics
 - `GET /api/moderator/posts/{id}/analysis` - Spam analysis
 
 ### Others
+
 - `GET /api/categories` - Categories
 - `GET /api/search` - Search
 - `POST /api/comments` - Comments
@@ -167,12 +182,14 @@ Available at: `/moderator`
 ## 🧪 System Testing
 
 ### Creating Test Data
+
 ```python
 # The system automatically loads the spam dataset
 # Spam examples for testing are in spam_dataset.json
 ```
 
 ### Testing Anti-Spam
+
 1. Create a post with spam content (e.g., "Earn $1000 a day!")
 2. The system will automatically analyze it
 3. Check the result in the moderator panel
@@ -188,6 +205,7 @@ Available at: `/moderator`
 ## 🚀 Deployment
 
 ### Docker Compose
+
 ```yaml
 version: '3.8'
 services:
@@ -204,6 +222,7 @@ services:
 ```
 
 ### Environment Variables
+
 ```env
 REDIS_HOST=redis
 REDIS_PORT=6379
@@ -230,7 +249,7 @@ MIT License. See the LICENSE file for details.
 - **Redis** for Vector Search capabilities
 - **SentenceTransformers** for pre-trained models
 - **FastAPI** for an excellent framework
-- **Bootstrap** for a beautiful UI
+- **Tailwind CSS** for a beautiful UI
 
 ---
 
