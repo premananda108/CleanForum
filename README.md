@@ -54,6 +54,11 @@ source venv/bin/activate  # Linux/Mac
 # or
 venv\Scripts\activate  # Windows
 
+# Upgrade pip
+python3 -m pip install --upgrade pip # Linux/Mac
+or
+python -m pip install --upgrade pip # Windows
+
 # Install dependencies
 pip install -r requirements.txt
 ```
