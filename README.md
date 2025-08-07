@@ -81,7 +81,9 @@ Install Redis
 
 ```bash
 # Copy the example configuration
-cp .env.example .env
+copy .env.example .env # Windows
+or
+cp .env.example .env # Linux/Mac
 
 # Edit the .env file
 REDIS_HOST=localhost
