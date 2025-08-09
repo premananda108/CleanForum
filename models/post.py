@@ -240,22 +240,35 @@ class Post:
         return posts, total_published
 
     @staticmethod
-    async def get_all_for_moderation(limit: int = 50, offset: int = 0, status: Optional[str] = None, moderation: Optional[str] = None) -> List[PostResponse]:
-        """Get all posts for moderation, including spam."""
-        post_ids = await db.zrevrange("posts:all", offset, offset + limit - 1)
+    async def get_all_for_moderation(limit: int = 50, offset: int = 0, status: Optional[str] = None, moderation: Optional[str] = None) -> (List[PostResponse], int):
+        """Get all posts for moderation, with filtering and pagination."""
+        all_post_ids = await db.zrevrange("posts:all", 0, -1)
 
-        posts = []
-        for post_id in post_ids:
-            post = await Post.get_by_id(post_id)
+        # Inefficient, but necessary for filtering without complex indexing
+        filtered_ids = []
+        for post_id in all_post_ids:
+            post = await Post.get_by_id(post_id) # Inefficient to fetch full post here
             if post:
+                # Apply filters
                 if status and post.status.value != status:
                     continue
                 if moderation == "moderated" and not post.moderated:
                     continue
                 if moderation == "not_moderated" and post.moderated:
                     continue
+                filtered_ids.append(post_id)
+
+        total_count = len(filtered_ids)
+        paginated_ids = filtered_ids[offset : offset + limit]
+
+        # Fetch full details for the paginated list
+        posts = []
+        for post_id in paginated_ids:
+            post = await Post.get_by_id(post_id)
+            if post:
                 posts.append(post)
-        return posts
+
+        return posts, total_count
 
     @staticmethod
     async def update(post_id: str, post_data: PostUpdate) -> bool:

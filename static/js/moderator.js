@@ -1,5 +1,9 @@
 // CleanForum - JavaScript for the moderator panel
 
+// State variables for pagination
+let moderatorCurrentPage = 1;
+const MODERATOR_POSTS_PER_PAGE = 10; // A smaller number for the panel
+
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
     if (path === '/moderator') {
@@ -7,19 +11,19 @@ document.addEventListener('DOMContentLoaded', function() {
         const statusToggle = document.getElementById('status-toggle');
         if (statusToggle) {
             statusToggle.addEventListener('change', function() {
-                loadModeratorPosts();
+                loadModeratorPosts({ page: 1 });
             });
         }
         const commentStatusToggle = document.getElementById('comment-status-toggle');
         if (commentStatusToggle) {
             commentStatusToggle.addEventListener('change', function() {
-                loadModeratorComments();
+                loadModeratorComments(); // Assuming comments don't need pagination for now
             });
         }
         const moderationToggle = document.getElementById('moderation-toggle');
         if (moderationToggle) {
             moderationToggle.addEventListener('change', function() {
-                loadModeratorPosts();
+                loadModeratorPosts({ page: 1 });
             });
         }
     }
@@ -97,17 +101,25 @@ async function loadStats() {
     }
 }
 
-async function loadModeratorPosts() {
+async function loadModeratorPosts({ page = 1 } = {}) {
+    moderatorCurrentPage = page;
+    const offset = (moderatorCurrentPage - 1) * MODERATOR_POSTS_PER_PAGE;
+
     try {
         const statusToggle = document.getElementById('status-toggle');
         const status = statusToggle.checked ? 'spam' : 'published';
         const moderationToggle = document.getElementById('moderation-toggle');
         const moderation = moderationToggle.checked ? 'moderated' : 'not_moderated';
-        const posts = await api.getPendingPosts(50, status, moderation);
+
+        const response = await api.getPendingPosts(MODERATOR_POSTS_PER_PAGE, status, moderation, offset);
+        const posts = response.posts;
+        const total = response.total;
+
         const container = document.getElementById('pending-posts');
 
         if (posts.length === 0) {
             container.innerHTML = '<p class="text-green-600 font-medium">No posts for moderation</p>';
+            renderModeratorPagination(0);
             return;
         }
 
@@ -144,9 +156,52 @@ async function loadModeratorPosts() {
             </div>
         `).join('');
 
+        renderModeratorPagination(total);
+
     } catch (error) {
         console.error('Error loading pending posts:', error);
+        document.getElementById('pending-posts').innerHTML = '<p class="text-red-600">Error loading posts.</p>';
     }
+}
+
+function renderModeratorPagination(totalPosts) {
+    const paginationContainer = document.getElementById('moderator-pagination-container');
+    if (!paginationContainer) return;
+
+    const totalPages = Math.ceil(totalPosts / MODERATOR_POSTS_PER_PAGE);
+
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+
+    let paginationHTML = '<div class="flex justify-between items-center mt-4">';
+
+    // Previous button
+    paginationHTML += `
+        <button
+            onclick="loadModeratorPosts({page: ${moderatorCurrentPage - 1}})"
+            class="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            ${moderatorCurrentPage === 1 ? 'disabled' : ''}>
+            &laquo; Prev
+        </button>
+    `;
+
+    // Page info
+    paginationHTML += `<span class="text-sm text-gray-600">Page ${moderatorCurrentPage} of ${totalPages}</span>`;
+
+    // Next button
+    paginationHTML += `
+        <button
+            onclick="loadModeratorPosts({page: ${moderatorCurrentPage + 1}})"
+            class="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            ${moderatorCurrentPage >= totalPages ? 'disabled' : ''}>
+            Next &raquo;
+        </button>
+    `;
+
+    paginationHTML += '</div>';
+    paginationContainer.innerHTML = paginationHTML;
 }
 
 async function moderatePost(postId, action) {
