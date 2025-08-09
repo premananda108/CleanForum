@@ -185,7 +185,7 @@ let currentPage = 1;
 const POSTS_PER_PAGE = 20;
 
 // Main page functions
-async function loadPosts(page = 1, categoryId = null) {
+async function loadPosts({ page = 1, categoryId = null } = {}) {
     currentPage = page;
     const offset = (currentPage - 1) * POSTS_PER_PAGE;
 
@@ -283,15 +283,14 @@ function renderPagination(totalPosts, categoryId) {
         return;
     }
 
-    // Pass categoryId as a string if it exists, otherwise as null
-    const catIdParam = categoryId ? `'${categoryId}'` : null;
+    const categoryIdJSON = JSON.stringify(categoryId);
 
     let paginationHTML = '<div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">';
 
     // Previous button
     paginationHTML += `
         <button
-            onclick="loadPosts(${currentPage - 1}, ${catIdParam})"
+            onclick="loadPosts({page: ${currentPage - 1}, categoryId: ${categoryIdJSON}})"
             class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
             ${currentPage === 1 ? 'disabled' : ''}>
             <i class="fas fa-arrow-left mr-2"></i>Previous
@@ -304,7 +303,7 @@ function renderPagination(totalPosts, categoryId) {
     // Next button
     paginationHTML += `
         <button
-            onclick="loadPosts(${currentPage + 1}, ${catIdParam})"
+            onclick="loadPosts({page: ${currentPage + 1}, categoryId: ${categoryIdJSON}})"
             class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
             ${currentPage >= totalPages ? 'disabled' : ''}>
             Next<i class="fas fa-arrow-right ml-2"></i>
@@ -876,6 +875,11 @@ document.addEventListener('DOMContentLoaded', function() {
         loadPosts();
         loadCategories();
         loadStatsForHomePage();
+    } else if (path.startsWith('/category/')) {
+        const parts = path.split('/').filter(p => p);
+        const categoryId = parts[1];
+        loadPosts({ categoryId: categoryId });
+        loadCategories(); // Also load categories on this page for consistency
     } else if (path.startsWith('/create')) {
         initCreatePostPage();
     } else if (path.startsWith('/posts/')) {
