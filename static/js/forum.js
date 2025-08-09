@@ -907,6 +907,16 @@ document.addEventListener('DOMContentLoaded', function() {
     } else if (path.startsWith('/search')) {
         handleSearchForm();
     }
+
+    // Mobile menu toggle
+    const mobileMenuButton = document.getElementById('mobile-menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+
+    if (mobileMenuButton && mobileMenu) {
+        mobileMenuButton.addEventListener('click', () => {
+            mobileMenu.classList.toggle('hidden');
+        });
+    }
 });
 
 async function initEditPostPage(postId) {
