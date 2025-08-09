@@ -211,7 +211,7 @@ class Post:
         return posts
 
     @staticmethod
-    async def get_all_for_moderation(limit: int = 50, offset: int = 0, status: Optional[str] = None) -> List[PostResponse]:
+    async def get_all_for_moderation(limit: int = 50, offset: int = 0, status: Optional[str] = None, moderation: Optional[str] = None) -> List[PostResponse]:
         """Get all posts for moderation, including spam."""
         post_ids = await db.zrevrange("posts:all", offset, offset + limit - 1)
 
@@ -220,6 +220,10 @@ class Post:
             post = await Post.get_by_id(post_id)
             if post:
                 if status and post.status.value != status:
+                    continue
+                if moderation == "moderated" and not post.moderated:
+                    continue
+                if moderation == "not_moderated" and post.moderated:
                     continue
                 posts.append(post)
         return posts

@@ -43,9 +43,9 @@ class SpamAnalysisResponse(BaseModel):
 # --- Post Endpoints ---
 
 @router.get("/pending-posts", response_model=List[PostResponse])
-async def get_pending_posts(limit: int = Query(50, le=100), status: Optional[str] = None):
+async def get_pending_posts(limit: int = Query(50, le=100), status: Optional[str] = None, moderation: Optional[str] = None):
     """Get all posts for moderation."""
-    return await Post.get_all_for_moderation(limit=limit, status=status)
+    return await Post.get_all_for_moderation(limit=limit, status=status, moderation=moderation)
 
 @router.get("/posts/{post_id}/analysis", response_model=SpamAnalysisResponse)
 async def get_post_analysis(post_id: str):

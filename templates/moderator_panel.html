@@ -27,15 +27,26 @@
                             Posts for Moderation
                         </h2>
                         <div class="flex items-center space-x-4">
-                            <label for="status-toggle" class="flex items-center cursor-pointer">
-                                <span class="mr-3 text-gray-700">Published</span>
-                                <div class="relative">
-                                    <input type="checkbox" id="status-toggle" class="sr-only">
-                                    <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
-                                    <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
-                                </div>
-                                <span class="ml-3 text-gray-700">Spam</span>
-                            </label>
+                            <div class="flex flex-col">
+                                <label for="status-toggle" class="flex items-center cursor-pointer">
+                                    <span class="mr-3 text-gray-700">Published</span>
+                                    <div class="relative">
+                                        <input type="checkbox" id="status-toggle" class="sr-only">
+                                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                                    </div>
+                                    <span class="ml-3 text-gray-700">Spam</span>
+                                </label>
+                                <label for="moderation-toggle" class="flex items-center cursor-pointer mt-4">
+                                    <span class="mr-3 text-gray-700">Not Moderated</span>
+                                    <div class="relative">
+                                        <input type="checkbox" id="moderation-toggle" class="sr-only">
+                                        <div class="block bg-gray-600 w-14 h-8 rounded-full"></div>
+                                        <div class="dot absolute left-1 top-1 bg-white w-6 h-6 rounded-full transition"></div>
+                                    </div>
+                                    <span class="ml-3 text-gray-700">Moderated</span>
+                                </label>
+                            </div>
                             <button onclick="loadModeratorPosts()" class="p-2 text-gray-400 hover:text-gray-600 transition-colors">
                                 <i class="fas fa-sync"></i>
                             </button>

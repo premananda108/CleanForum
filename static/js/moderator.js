@@ -16,6 +16,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadModeratorComments();
             });
         }
+        const moderationToggle = document.getElementById('moderation-toggle');
+        if (moderationToggle) {
+            moderationToggle.addEventListener('change', function() {
+                loadModeratorPosts();
+            });
+        }
     }
 });
 
@@ -95,7 +101,9 @@ async function loadModeratorPosts() {
     try {
         const statusToggle = document.getElementById('status-toggle');
         const status = statusToggle.checked ? 'spam' : 'published';
-        const posts = await api.getPendingPosts(50, status);
+        const moderationToggle = document.getElementById('moderation-toggle');
+        const moderation = moderationToggle.checked ? 'moderated' : 'not_moderated';
+        const posts = await api.getPendingPosts(50, status, moderation);
         const container = document.getElementById('pending-posts');
 
         if (posts.length === 0) {
