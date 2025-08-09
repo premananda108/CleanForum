@@ -180,11 +180,23 @@ function getSpamBadge(isSpam, spamScore) {
     return '<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"><i class="fas fa-shield-alt mr-1"></i>Clean</span>';
 }
 
+// State variables for pagination
+let currentPage = 1;
+const POSTS_PER_PAGE = 20;
+
 // Main page functions
-async function loadPosts(categoryId = null) {
+async function loadPosts(page = 1, categoryId = null) {
+    currentPage = page;
+    const offset = (currentPage - 1) * POSTS_PER_PAGE;
+
     try {
-        const posts = await api.getPosts(20, 0, categoryId);
+        const response = await api.getPosts(POSTS_PER_PAGE, offset, categoryId);
+        const posts = response.posts;
+        const totalPosts = response.total;
+
         const container = document.getElementById('posts-container');
+
+        if (!container) return; // Exit if container not found
 
         if (posts.length === 0) {
             container.innerHTML = `
@@ -196,11 +208,12 @@ async function loadPosts(categoryId = null) {
                     <p class="text-gray-400 text-sm">Be the first to create a post!</p>
                 </div>
             `;
+            // Still render pagination to clear it if it exists
+            renderPagination(0, categoryId);
             return;
         }
 
         container.innerHTML = posts.map(post => {
-            // First, render Markdown to HTML, then extract the plain text
             const renderedHtml = marked.parse(post.content);
             const tempDiv = document.createElement('div');
             tempDiv.innerHTML = renderedHtml;
@@ -243,7 +256,10 @@ async function loadPosts(categoryId = null) {
                     </div>
                 </div>
             </div>
-        `}).join('');
+            `;
+        }).join('');
+
+        renderPagination(totalPosts, categoryId);
 
     } catch (error) {
         console.error('Error loading posts:', error);
@@ -254,6 +270,49 @@ async function loadPosts(categoryId = null) {
                 <p class="text-red-600 text-sm">Try refreshing the page</p>
             </div>`;
     }
+}
+
+function renderPagination(totalPosts, categoryId) {
+    const paginationContainer = document.getElementById('pagination-container');
+    if (!paginationContainer) return;
+
+    const totalPages = Math.ceil(totalPosts / POSTS_PER_PAGE);
+
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = ''; // No pagination needed for a single page
+        return;
+    }
+
+    // Pass categoryId as a string if it exists, otherwise as null
+    const catIdParam = categoryId ? `'${categoryId}'` : null;
+
+    let paginationHTML = '<div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">';
+
+    // Previous button
+    paginationHTML += `
+        <button
+            onclick="loadPosts(${currentPage - 1}, ${catIdParam})"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+            ${currentPage === 1 ? 'disabled' : ''}>
+            <i class="fas fa-arrow-left mr-2"></i>Previous
+        </button>
+    `;
+
+    // Page info
+    paginationHTML += `<span class="text-gray-600 font-medium">Page ${currentPage} of ${totalPages}</span>`;
+
+    // Next button
+    paginationHTML += `
+        <button
+            onclick="loadPosts(${currentPage + 1}, ${catIdParam})"
+            class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+            ${currentPage >= totalPages ? 'disabled' : ''}>
+            Next<i class="fas fa-arrow-right ml-2"></i>
+        </button>
+    `;
+
+    paginationHTML += '</div>';
+    paginationContainer.innerHTML = paginationHTML;
 }
 
 async function loadCategories() {

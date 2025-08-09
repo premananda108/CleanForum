@@ -184,31 +184,60 @@ class Post:
         )
 
     @staticmethod
-    async def get_all(limit: int = 20, offset: int = 0) -> List[PostResponse]:
-        """Get a list of posts"""
-        # Get post IDs sorted by creation time
-        post_ids = await db.zrevrange("posts:all", offset, offset + limit - 1)
+    async def get_all(limit: int = 20, offset: int = 0) -> (List[PostResponse], int):
+        """Get a list of posts and the total count of published posts."""
+        all_post_ids = await db.zrevrange("posts:all", 0, -1)
+
+        # Use a pipeline to fetch all statuses efficiently
+        pipe = db.redis_client.pipeline()
+        for post_id in all_post_ids:
+            pipe.hget(f"post:{post_id}", "status")
+        statuses = await pipe.execute()
+
+        published_post_ids = [
+            post_id for post_id, status in zip(all_post_ids, statuses)
+            if status and status == PostStatus.PUBLISHED.value
+        ]
+
+        total_published = len(published_post_ids)
+
+        paginated_ids = published_post_ids[offset : offset + limit]
 
         posts = []
-        for post_id in post_ids:
+        for post_id in paginated_ids:
             post = await Post.get_by_id(post_id)
-            if post and post.status == PostStatus.PUBLISHED:
+            if post: # Should always be true as we filtered
                 posts.append(post)
 
-        return posts
+        return posts, total_published
 
     @staticmethod
-    async def get_by_category(category_id: str, limit: int = 20, offset: int = 0) -> List[PostResponse]:
-        """Get posts by category"""
-        post_ids = await db.zrevrange(f"posts:category:{category_id}", offset, offset + limit - 1)
+    async def get_by_category(category_id: str, limit: int = 20, offset: int = 0) -> (List[PostResponse], int):
+        """Get posts by category and the total count."""
+        all_post_ids_in_category = await db.zrevrange(f"posts:category:{category_id}", 0, -1)
+
+        # Use a pipeline to fetch all statuses efficiently
+        pipe = db.redis_client.pipeline()
+        for post_id in all_post_ids_in_category:
+            pipe.hget(f"post:{post_id}", "status")
+        statuses = await pipe.execute()
+
+        published_post_ids = [
+            post_id for post_id, status in zip(all_post_ids_in_category, statuses)
+            if status and status == PostStatus.PUBLISHED.value
+        ]
+
+        total_published = len(published_post_ids)
+
+        paginated_ids = published_post_ids[offset : offset + limit]
 
         posts = []
-        for post_id in post_ids:
+        for post_id in paginated_ids:
             post = await Post.get_by_id(post_id)
-            if post and post.status == PostStatus.PUBLISHED:
+            if post:
                 posts.append(post)
 
-        return posts
+        return posts, total_published
 
     @staticmethod
     async def get_all_for_moderation(limit: int = 50, offset: int = 0, status: Optional[str] = None, moderation: Optional[str] = None) -> List[PostResponse]:

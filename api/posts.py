@@ -2,6 +2,7 @@
 API routes for working with posts
 """
 from fastapi import APIRouter, HTTPException, Depends, Query
+from pydantic import BaseModel
 import logging
 from typing import List, Optional
 from models.post import Post, PostCreate, PostUpdate, PostResponse, PostStatus
@@ -58,7 +59,11 @@ async def create_post(
     logging.info(f"Post {post_id} processed and returned to the client successfully.")
     return post
 
-@router.get("/posts", response_model=List[PostResponse])
+class PaginatedPostResponse(BaseModel):
+    posts: List[PostResponse]
+    total: int
+
+@router.get("/posts", response_model=PaginatedPostResponse)
 async def get_posts(
     limit: int = Query(20, le=100),
     offset: int = Query(0, ge=0),
@@ -67,11 +72,11 @@ async def get_posts(
     """Get a list of posts"""
 
     if category_id:
-        posts = await Post.get_by_category(category_id, limit, offset)
+        posts, total = await Post.get_by_category(category_id, limit, offset)
     else:
-        posts = await Post.get_all(limit, offset)
+        posts, total = await Post.get_all(limit, offset)
 
-    return posts
+    return PaginatedPostResponse(posts=posts, total=total)
 
 @router.get("/posts/{post_id}", response_model=PostResponse)
 async def get_post(post_id: str, increment_views: bool = True):
