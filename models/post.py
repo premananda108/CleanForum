@@ -48,6 +48,7 @@ class PostResponse(BaseModel):
     spam_score: float = 0.0
     reading_time: int = 0  # in minutes
     similar_posts: Optional[List['PostResponse']] = None
+    moderated: bool = False
 
 class Post:
     """Class for working with posts"""
@@ -178,7 +179,8 @@ class Post:
             vote_score=int(post_data.get("vote_score", 0)),
             is_spam=post_data.get("is_spam", "False") == "True",
             spam_score=float(post_data.get("spam_score", 0.0)),
-            reading_time=int(post_data.get("reading_time", 1))
+            reading_time=int(post_data.get("reading_time", 1)),
+            moderated=post_data.get("moderated", "False") == "True"
         )
 
     @staticmethod

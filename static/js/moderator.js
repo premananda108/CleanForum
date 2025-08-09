@@ -18,6 +18,24 @@ function getSpamBadge(isSpam, spamScore) {
     return '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full">Clean</span>';
 }
 
+function getStatusBadge(status) {
+    const statuses = {
+        published: '<span class="px-2 py-1 text-xs font-semibold text-white bg-green-500 rounded-full">Published</span>',
+        spam: '<span class="px-2 py-1 text-xs font-semibold text-white bg-red-500 rounded-full">Spam</span>',
+        moderated: '<span class="px-2 py-1 text-xs font-semibold text-white bg-blue-500 rounded-full">Moderated</span>',
+        draft: '<span class="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-200 rounded-full">Draft</span>',
+        deleted: '<span class="px-2 py-1 text-xs font-semibold text-white bg-gray-500 rounded-full">Deleted</span>',
+    };
+    return statuses[status.toLowerCase()] || `<span class="px-2 py-1 text-xs font-semibold text-gray-700 bg-gray-200 rounded-full">${status}</span>`;
+}
+
+function getModeratedBadge(moderated) {
+    if (moderated) {
+        return '<span class="px-2 py-1 text-xs font-semibold text-white bg-purple-500 rounded-full">Moderated</span>';
+    }
+    return '';
+}
+
 async function loadModeratorData() {
     await loadStats();
     await loadModeratorPosts();
@@ -81,6 +99,8 @@ async function loadModeratorPosts() {
                         <p class="text-sm text-gray-600 mt-1">${post.content.substring(0, 100)}...</p>
                         <div class="mt-3 flex items-center space-x-2">
                             ${getSpamBadge(post.is_spam, post.spam_score)}
+                            ${getStatusBadge(post.status)}
+                            ${getModeratedBadge(post.moderated)}
                             <span class="text-xs text-gray-500">Score: <strong>${(post.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>

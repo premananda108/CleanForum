@@ -94,7 +94,8 @@ async def moderate_post(action: ModerationAction):
         raise HTTPException(status_code=404, detail="Post not found")
 
     if action.action == "approve":
-        await Post.mark_as_spam(action.entity_id, 0.0, False, moderated=True)
+        await Post.mark_as_spam(action.entity_id, 0.0, False, moderated=False)
+        await db.hset(f"post:{action.entity_id}", {"moderated": "True"})
         await vector_classifier.retrain_with_feedback(action.entity_id, "post", False, action.moderator_id)
         await db.hset(f"vector_analysis:post:{action.entity_id}", mapping={
             "spam_score": 0.0,
