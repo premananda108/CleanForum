@@ -155,21 +155,24 @@ class Post:
         from models.category import Category
         from models.user import User
 
-        category = await Category.get_by_id(post_data["category_id"])
-        author = await User.get_by_id(post_data["author_id"])
+        category_id = post_data.get("category_id")
+        category = await Category.get_by_id(category_id) if category_id else None
+
+        author_id = post_data.get("author_id")
+        author = await User.get_by_id(author_id) if author_id else None
 
         return PostResponse(
-            id=post_data["id"],
-            title=post_data["title"],
-            content=post_data["content"],
-            category_id=post_data["category_id"],
+            id=post_data.get("id"),
+            title=post_data.get("title"),
+            content=post_data.get("content"),
+            category_id=category_id,
             category_name=category.name if category else "Unknown",
-            author_id=post_data["author_id"],
+            author_id=author_id,
             author_username=author.username if author else "Unknown",
             tags=json.loads(post_data.get("tags", "[]")),
-            status=PostStatus(post_data["status"]),
-            created_at=datetime.fromisoformat(post_data["created_at"]),
-            updated_at=datetime.fromisoformat(post_data["updated_at"]),
+            status=PostStatus(post_data.get("status", "draft")),
+            created_at=datetime.fromisoformat(post_data.get("created_at")),
+            updated_at=datetime.fromisoformat(post_data.get("updated_at")),
             view_count=int(post_data.get("view_count", 0)),
             comment_count=int(post_data.get("comment_count", 0)),
             vote_score=int(post_data.get("vote_score", 0)),
