@@ -105,6 +105,7 @@ async def moderate_post(action: ModerationAction):
         return {"message": "Post approved"}
     elif action.action == "mark_spam":
         await Post.mark_as_spam(action.entity_id, 1.0, True)
+        await db.hset(f"post:{action.entity_id}", {"moderated": "True"})
         await vector_classifier.retrain_with_feedback(action.entity_id, "post", True, action.moderator_id)
         await db.hset(f"vector_analysis:post:{action.entity_id}", mapping={
             "spam_score": 1.0,
