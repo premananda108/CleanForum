@@ -98,8 +98,8 @@ class ForumAPI {
     }
 
     // Moderator API
-    async getPendingPosts() {
-        return this.request('/moderator/pending-posts');
+    async getPendingPosts(limit = 50, status = 'published') {
+        return this.request(`/moderator/pending-posts?limit=${limit}&status=${status}`);
     }
 
     async moderatePost(postId, action) {

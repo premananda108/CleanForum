@@ -4,6 +4,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
     if (path === '/moderator') {
         loadModeratorData();
+        const statusToggle = document.getElementById('status-toggle');
+        if (statusToggle) {
+            statusToggle.addEventListener('change', function() {
+                loadModeratorPosts();
+            });
+        }
     }
 });
 
@@ -81,7 +87,9 @@ async function loadStats() {
 
 async function loadModeratorPosts() {
     try {
-        const posts = await api.getPendingPosts();
+        const statusToggle = document.getElementById('status-toggle');
+        const status = statusToggle.checked ? 'spam' : 'published';
+        const posts = await api.getPendingPosts(50, status);
         const container = document.getElementById('pending-posts');
 
         if (posts.length === 0) {
