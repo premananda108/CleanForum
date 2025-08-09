@@ -26,17 +26,3 @@
 </div>
 {% endblock %}
 
-{% block scripts %}
-{{ super() }}  {# This will add the scripts from base.html, including forum.js #}
-<script>
-    document.addEventListener('DOMContentLoaded', async function() {
-        const categoryId = "{{ category.id }}";
-        
-        // Load posts for this category
-        await loadPosts(categoryId);
-
-        // Load the list of all categories
-        await loadCategories();
-    });
-</script>
-{% endblock %}

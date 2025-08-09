@@ -70,13 +70,20 @@ async def get_posts(
     category_id: Optional[str] = None
 ):
     """Get a list of posts"""
+    try:
+        if category_id:
+            logging.info(f"Fetching posts for category {category_id} with limit={limit}, offset={offset}")
+            posts, total = await Post.get_by_category(category_id, limit, offset)
+            logging.info(f"Found {total} posts for category {category_id}")
+        else:
+            logging.info(f"Fetching all posts with limit={limit}, offset={offset}")
+            posts, total = await Post.get_all(limit, offset)
+            logging.info(f"Found {total} posts in total")
 
-    if category_id:
-        posts, total = await Post.get_by_category(category_id, limit, offset)
-    else:
-        posts, total = await Post.get_all(limit, offset)
-
-    return PaginatedPostResponse(posts=posts, total=total)
+        return PaginatedPostResponse(posts=posts, total=total)
+    except Exception as e:
+        logging.error(f"Error fetching posts: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error while fetching posts")
 
 @router.get("/posts/{post_id}", response_model=PostResponse)
 async def get_post(post_id: str, increment_views: bool = True):

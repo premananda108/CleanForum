@@ -8,7 +8,15 @@ router = APIRouter()
 
 @router.get("/categories", response_model=List[CategoryResponse])
 async def get_categories():
-    return await Category.get_all()
+    """Returns all categories with their post counts"""
+    logging.info("Attempting to retrieve all categories")
+    try:
+        categories = await Category.get_all()
+        logging.info(f"Successfully retrieved {len(categories)} categories")
+        return categories
+    except Exception as e:
+        logging.error(f"An unexpected error occurred while retrieving categories: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="Internal server error")
 
 @router.post("/categories", response_model=CategoryResponse)
 async def create_category(category_data: CategoryCreate):

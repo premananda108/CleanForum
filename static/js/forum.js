@@ -337,6 +337,18 @@ async function loadCategories() {
 
     } catch (error) {
         console.error('Error loading categories:', error);
+        const container = document.getElementById('categories-list');
+        if (container) {
+            container.innerHTML = `
+                <div class="p-4 text-sm text-red-700 bg-red-100 rounded-xl" role="alert">
+                    <p class="font-bold flex items-center">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Error
+                    </p>
+                    <p>Could not load categories. Please try again later.</p>
+                </div>
+            `;
+        }
     }
 }
 
