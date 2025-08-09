@@ -128,18 +128,31 @@ class Comment:
         return comments
 
     @staticmethod
-    async def get_all_for_moderation(limit: int = 50, offset: int = 0, status: Optional[str] = None) -> List[CommentResponse]:
-        """Get all comments for moderation, including spam."""
-        comment_ids = await db.zrevrange("comments:all", offset, offset + limit - 1)
+    async def get_all_for_moderation(limit: int = 50, offset: int = 0, status: Optional[str] = None) -> (List[CommentResponse], int):
+        """Get all comments for moderation, with filtering and pagination."""
+        all_comment_ids = await db.zrevrange("comments:all", 0, -1)
+
+        # This is inefficient, but necessary for filtering without complex indexing
+        # A better approach would be to use separate sorted sets for different statuses
+        filtered_ids = []
+        if status:
+            for comment_id in all_comment_ids:
+                comment_status = await db.hget(f"comment:{comment_id}", "status")
+                if comment_status == status:
+                    filtered_ids.append(comment_id)
+        else:
+            filtered_ids = all_comment_ids
+
+        total_count = len(filtered_ids)
+        paginated_ids = filtered_ids[offset : offset + limit]
 
         comments = []
-        for comment_id in comment_ids:
+        for comment_id in paginated_ids:
             comment = await Comment.get_by_id(comment_id)
             if comment:
-                if status and comment.status.value != status:
-                    continue
                 comments.append(comment)
-        return comments
+
+        return comments, total_count
 
     @staticmethod
     async def update(comment_id: str, comment_data: CommentUpdate) -> bool:

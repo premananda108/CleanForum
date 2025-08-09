@@ -3,6 +3,8 @@
 // State variables for pagination
 let moderatorCurrentPage = 1;
 const MODERATOR_POSTS_PER_PAGE = 10; // A smaller number for the panel
+let moderatorCommentCurrentPage = 1;
+const MODERATOR_COMMENTS_PER_PAGE = 10;
 
 document.addEventListener('DOMContentLoaded', function() {
     const path = window.location.pathname;
@@ -17,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const commentStatusToggle = document.getElementById('comment-status-toggle');
         if (commentStatusToggle) {
             commentStatusToggle.addEventListener('change', function() {
-                loadModeratorComments(); // Assuming comments don't need pagination for now
+                loadModeratorComments({ page: 1 });
             });
         }
         const moderationToggle = document.getElementById('moderation-toggle');
@@ -228,14 +230,22 @@ async function showPostSpamAnalysis(postId) {
     }
 }
 
-async function loadModeratorComments() {
+async function loadModeratorComments({ page = 1 } = {}) {
+    moderatorCommentCurrentPage = page;
+    const offset = (moderatorCommentCurrentPage - 1) * MODERATOR_COMMENTS_PER_PAGE;
+
     try {
         const statusToggle = document.getElementById('comment-status-toggle');
         const status = statusToggle.checked ? 'spam' : 'published';
-        const comments = await api.getPendingComments(50, status);
+
+        const response = await api.getPendingComments(MODERATOR_COMMENTS_PER_PAGE, status, offset);
+        const comments = response.comments;
+        const total = response.total;
+
         const container = document.getElementById('pending-comments');
         if (comments.length === 0) {
             container.innerHTML = '<p class="text-green-600 font-medium">No comments for moderation</p>';
+            renderCommentPagination(0);
             return;
         }
         container.innerHTML = comments.map(comment => `
@@ -261,10 +271,50 @@ async function loadModeratorComments() {
                 </div>
             </div>
         `).join('');
+
+        renderCommentPagination(total);
+
     } catch (error) {
         console.error('Error loading pending comments:', error);
         document.getElementById('pending-comments').innerHTML = '<p class="text-red-600">Error loading comments.</p>';
     }
+}
+
+function renderCommentPagination(totalComments) {
+    const paginationContainer = document.getElementById('comment-pagination-container');
+    if (!paginationContainer) return;
+
+    const totalPages = Math.ceil(totalComments / MODERATOR_COMMENTS_PER_PAGE);
+
+    if (totalPages <= 1) {
+        paginationContainer.innerHTML = '';
+        return;
+    }
+
+    let paginationHTML = '<div class="flex justify-between items-center mt-4">';
+
+    paginationHTML += `
+        <button
+            onclick="loadModeratorComments({page: ${moderatorCommentCurrentPage - 1}})"
+            class="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            ${moderatorCommentCurrentPage === 1 ? 'disabled' : ''}>
+            &laquo; Prev
+        </button>
+    `;
+
+    paginationHTML += `<span class="text-sm text-gray-600">Page ${moderatorCommentCurrentPage} of ${totalPages}</span>`;
+
+    paginationHTML += `
+        <button
+            onclick="loadModeratorComments({page: ${moderatorCommentCurrentPage + 1}})"
+            class="px-3 py-1 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            ${moderatorCommentCurrentPage >= totalPages ? 'disabled' : ''}>
+            Next &raquo;
+        </button>
+    `;
+
+    paginationHTML += '</div>';
+    paginationContainer.innerHTML = paginationHTML;
 }
 
 async function moderateComment(commentId, action) {
