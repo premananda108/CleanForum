@@ -24,7 +24,7 @@ router = APIRouter()
 # --- API Data Models ---
 class ModerationAction(BaseModel):
     entity_id: str
-    action: str  # "approve", "mark_spam"
+    action: str  # "approve", "mark_spam", "delete"
     moderator_id: str = "moderator_demo"
 
 class SpamAnalysisResponse(BaseModel):
@@ -101,6 +101,10 @@ async def moderate_post(action: ModerationAction):
         await Post.mark_as_spam(action.entity_id, 1.0, True)
         await vector_classifier.retrain_with_feedback(action.entity_id, "post", True, action.moderator_id)
         return {"message": "Post marked as spam"}
+    elif action.action == "delete":
+        await Post.hard_delete(action.entity_id)
+        await vector_manager.delete_vector(f"post:{action.entity_id}")
+        return {"message": "Post permanently deleted"}
     else:
         raise HTTPException(status_code=400, detail="Unknown action")
 
@@ -153,6 +157,10 @@ async def moderate_comment(action: ModerationAction):
         await Comment.mark_as_spam(action.entity_id, 1.0, True)
         await vector_classifier.retrain_with_feedback(action.entity_id, "comment", True, action.moderator_id)
         return {"message": "Comment marked as spam"}
+    elif action.action == "delete":
+        await Comment.hard_delete(action.entity_id)
+        await vector_manager.delete_vector(f"comment:{action.entity_id}")
+        return {"message": "Comment permanently deleted"}
     else:
         raise HTTPException(status_code=400, detail="Unknown action")
 

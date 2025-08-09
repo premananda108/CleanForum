@@ -84,14 +84,14 @@ async function loadModeratorPosts() {
                             <span class="text-xs text-gray-500">Score: <strong>${(post.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>
-                    <div class="flex flex-col space-y-2 ml-4">
+                    <div class="flex flex-row space-x-2 ml-4">
                         <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition" onclick="moderatePost('${post.id}', 'approve')">
                             <i class="fas fa-check"></i>
                         </button>
                         <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition" onclick="moderatePost('${post.id}', 'mark_spam')">
                             <i class="fas fa-ban"></i>
                         </button>
-                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition" onclick="deletePost('${post.id}')">
+                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition" onclick="moderatePost('${post.id}', 'delete')">
                             <i class="fas fa-trash"></i>
                         </button>
                         <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition" onclick="showPostSpamAnalysis('${post.id}')">
@@ -108,6 +108,9 @@ async function loadModeratorPosts() {
 }
 
 async function moderatePost(postId, action) {
+    if (action === 'delete' && !confirm('Are you sure you want to permanently delete this post?')) {
+        return;
+    }
     try {
         const result = await api.moderatePost(postId, action);
         showAlert(result.message, action === 'approve' ? 'success' : 'warning');
@@ -115,20 +118,6 @@ async function moderatePost(postId, action) {
     } catch (error) {
         console.error('Error moderating post:', error);
         showAlert('Error moderating post', 'danger');
-    }
-}
-
-async function deletePost(postId) {
-    if (!confirm('Are you sure you want to delete this post?')) {
-        return;
-    }
-    try {
-        await api.deletePost(postId);
-        showAlert('Post deleted successfully', 'success');
-        await loadModeratorPosts();
-    } catch (error) {
-        console.error('Error deleting post:', error);
-        showAlert('Error deleting post', 'danger');
     }
 }
 
@@ -164,9 +153,10 @@ async function loadModeratorComments() {
                             <span class="text-xs text-gray-500">Score: <strong>${(comment.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>
-                    <div class="flex flex-col space-y-2 ml-4">
+                    <div class="flex flex-row space-x-2 ml-4">
                         <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-green-100 text-green-600 hover:bg-green-200 transition" onclick="moderateComment('${comment.id}', 'approve')"><i class="fas fa-check"></i></button>
                         <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-red-100 text-red-600 hover:bg-red-200 transition" onclick="moderateComment('${comment.id}', 'mark_spam')"><i class="fas fa-ban"></i></button>
+                        <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition" onclick="moderateComment('${comment.id}', 'delete')"><i class="fas fa-trash"></i></button>
                         <button class="w-10 h-10 flex items-center justify-center rounded-lg bg-blue-100 text-blue-600 hover:bg-blue-200 transition" onclick="showCommentSpamAnalysis('${comment.id}')"><i class="fas fa-search"></i></button>
                     </div>
                 </div>
@@ -179,6 +169,9 @@ async function loadModeratorComments() {
 }
 
 async function moderateComment(commentId, action) {
+    if (action === 'delete' && !confirm('Are you sure you want to permanently delete this comment?')) {
+        return;
+    }
     try {
         const result = await api.moderateComment(commentId, action);
         showAlert(result.message, action === 'approve' ? 'success' : 'warning');

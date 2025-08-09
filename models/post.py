@@ -495,6 +495,69 @@ class Post:
 
         logging.info(f"Re-indexing complete. Successfully indexed {indexed_count} posts.")
 
+    @staticmethod
+    async def hard_delete(post_id: str) -> bool:
+        """
+        Permanently deletes a post and all its related data.
+        This is a hard delete and is irreversible.
+        """
+        import logging
+        from models.comment import Comment
+        from services.redis_manager import vector_manager
+
+        # 1. Get post data to know author_id and category_id
+        post_data = await db.hgetall(f"post:{post_id}")
+        if not post_data:
+            logging.warning(f"Attempted to hard delete non-existent post {post_id}")
+            return False
+
+        author_id = post_data.get("author_id")
+        category_id = post_data.get("category_id")
+
+        # 2. Delete all comments associated with the post
+        comment_ids_bytes = await db.zrevrange(f"post:{post_id}:comments", 0, -1)
+        comment_ids = [cid.decode('utf-8') for cid in comment_ids_bytes]
+        for comment_id in comment_ids:
+            await Comment.hard_delete(comment_id)
+        
+        logging.info(f"Deleted {len(comment_ids)} comments for post {post_id}")
+
+        # 3. Use a transaction for atomicity
+        async with db.redis_client.pipeline(transaction=True) as pipe:
+            # Delete the main post hash
+            pipe.delete(f"post:{post_id}")
+
+            # Remove the post ID from all sorted sets
+            pipe.zrem("posts:all", post_id)
+            if category_id:
+                pipe.zrem(f"posts:category:{category_id}", post_id)
+            if author_id:
+                pipe.zrem(f"posts:author:{author_id}", post_id)
+
+            # Remove from the spam set if it was there
+            pipe.srem("posts:spam", post_id)
+            
+            # Decrement total posts counter
+            pipe.decr("total_posts")
+            
+            # Decrement user's post count
+            if author_id:
+                pipe.hincrby(f"user:{author_id}:stats", "post_count", -1)
+
+            # Execute the transaction
+            await pipe.execute()
+
+        # 4. Update the post count in the category (outside the transaction)
+        if category_id:
+            from models.category import Category
+            await Category.update_post_count(category_id, -1)
+
+        # 5. Delete the vector from the search index (outside the transaction)
+        await vector_manager.delete_vector(f"post:{post_id}")
+
+        logging.info(f"Post {post_id} was permanently deleted.")
+
+        return True
 
 # This is needed to update the links in the Pydantic models after all classes have been defined
 PostResponse.model_rebuild()

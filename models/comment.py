@@ -178,3 +178,54 @@ class Comment:
     async def count_spam() -> int:
         """Count the number of spam comments."""
         return await db.scard("comments:spam")
+
+    @staticmethod
+    async def hard_delete(comment_id: str) -> bool:
+        """
+        Permanently deletes a comment.
+        This is a hard delete and is irreversible.
+        """
+        import logging
+        from services.redis_manager import vector_manager
+
+        # 1. Get comment data to know post_id and author_id
+        comment_data = await db.hgetall(f"comment:{comment_id}")
+        if not comment_data:
+            logging.warning(f"Attempted to hard delete non-existent comment {comment_id}")
+            return False
+
+        post_id = comment_data.get("post_id")
+        author_id = comment_data.get("author_id")
+
+        # 2. Use a transaction for atomicity
+        async with db.redis_client.pipeline(transaction=True) as pipe:
+            # Delete the main comment hash
+            pipe.delete(f"comment:{comment_id}")
+
+            # Remove the comment ID from all sorted sets
+            pipe.zrem("comments:all", comment_id)
+            if post_id:
+                pipe.zrem(f"comments:post:{post_id}", comment_id)
+            if author_id:
+                pipe.zrem(f"comments:author:{author_id}", comment_id)
+
+            # Remove from the spam set if it was there
+            pipe.srem("comments:spam", comment_id)
+
+            # Decrement post's comment count
+            if post_id:
+                pipe.hincrby(f"post:{post_id}", "comment_count", -1)
+            
+            # Decrement user's comment count
+            if author_id:
+                pipe.hincrby(f"user:{author_id}:stats", "comment_count", -1)
+
+            # Execute the transaction
+            await pipe.execute()
+
+        # 3. Delete the vector from the search index (outside the transaction)
+        await vector_manager.delete_vector(f"comment:{comment_id}")
+
+        logging.info(f"Comment {comment_id} was permanently deleted.")
+
+        return True
