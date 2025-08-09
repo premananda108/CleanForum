@@ -96,10 +96,20 @@ async def moderate_post(action: ModerationAction):
     if action.action == "approve":
         await Post.mark_as_spam(action.entity_id, 0.0, False, moderated=True)
         await vector_classifier.retrain_with_feedback(action.entity_id, "post", False, action.moderator_id)
+        await db.hset(f"vector_analysis:post:{action.entity_id}", mapping={
+            "spam_score": 0.0,
+            "is_spam": "False",
+            "vector_prediction": "legitimate"
+        })
         return {"message": "Post approved"}
     elif action.action == "mark_spam":
         await Post.mark_as_spam(action.entity_id, 1.0, True)
         await vector_classifier.retrain_with_feedback(action.entity_id, "post", True, action.moderator_id)
+        await db.hset(f"vector_analysis:post:{action.entity_id}", mapping={
+            "spam_score": 1.0,
+            "is_spam": "True",
+            "vector_prediction": "spam"
+        })
         return {"message": "Post marked as spam"}
     elif action.action == "delete":
         await Post.hard_delete(action.entity_id)
@@ -152,10 +162,20 @@ async def moderate_comment(action: ModerationAction):
     if action.action == "approve":
         await Comment.mark_as_spam(action.entity_id, 0.0, False)
         await vector_classifier.retrain_with_feedback(action.entity_id, "comment", False, action.moderator_id)
+        await db.hset(f"vector_analysis:comment:{action.entity_id}", mapping={
+            "spam_score": 0.0,
+            "is_spam": "False",
+            "vector_prediction": "legitimate"
+        })
         return {"message": "Comment approved"}
     elif action.action == "mark_spam":
         await Comment.mark_as_spam(action.entity_id, 1.0, True)
         await vector_classifier.retrain_with_feedback(action.entity_id, "comment", True, action.moderator_id)
+        await db.hset(f"vector_analysis:comment:{action.entity_id}", mapping={
+            "spam_score": 1.0,
+            "is_spam": "True",
+            "vector_prediction": "spam"
+        })
         return {"message": "Comment marked as spam"}
     elif action.action == "delete":
         await Comment.hard_delete(action.entity_id)
