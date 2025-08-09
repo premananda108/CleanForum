@@ -122,9 +122,9 @@ async def moderate_post(action: ModerationAction):
 # --- Comment Endpoints ---
 
 @router.get("/pending-comments", response_model=List[CommentResponse])
-async def get_pending_comments(limit: int = Query(50, le=100)):
+async def get_pending_comments(limit: int = Query(50, le=100), status: Optional[str] = None):
     """Get all comments for moderation."""
-    return await Comment.get_all_for_moderation(limit=limit)
+    return await Comment.get_all_for_moderation(limit=limit, status=status)
 
 @router.get("/comments/{comment_id}/analysis", response_model=SpamAnalysisResponse)
 async def get_comment_analysis(comment_id: str):

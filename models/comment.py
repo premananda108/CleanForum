@@ -128,7 +128,7 @@ class Comment:
         return comments
 
     @staticmethod
-    async def get_all_for_moderation(limit: int = 50, offset: int = 0) -> List[CommentResponse]:
+    async def get_all_for_moderation(limit: int = 50, offset: int = 0, status: Optional[str] = None) -> List[CommentResponse]:
         """Get all comments for moderation, including spam."""
         comment_ids = await db.zrevrange("comments:all", offset, offset + limit - 1)
 
@@ -136,6 +136,8 @@ class Comment:
         for comment_id in comment_ids:
             comment = await Comment.get_by_id(comment_id)
             if comment:
+                if status and comment.status.value != status:
+                    continue
                 comments.append(comment)
         return comments
 

@@ -116,8 +116,8 @@ class ForumAPI {
         return this.request(`/moderator/posts/${postId}/analysis`);
     }
 
-    async getPendingComments() {
-        return this.request('/moderator/pending-comments');
+    async getPendingComments(limit = 50, status = 'published') {
+        return this.request(`/moderator/pending-comments?limit=${limit}&status=${status}`);
     }
 
     async moderateComment(commentId, action) {

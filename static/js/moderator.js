@@ -10,6 +10,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 loadModeratorPosts();
             });
         }
+        const commentStatusToggle = document.getElementById('comment-status-toggle');
+        if (commentStatusToggle) {
+            commentStatusToggle.addEventListener('change', function() {
+                loadModeratorComments();
+            });
+        }
     }
 });
 
@@ -107,9 +113,9 @@ async function loadModeratorPosts() {
                         <p class="text-sm text-gray-600 mt-1">${post.content.substring(0, 100)}...</p>
                         <div class="mt-3 flex items-center space-x-2">
                             ${getSpamBadge(post.is_spam, post.spam_score)}
+                            <span class="text-xs text-gray-500">Score: <strong>${(post.spam_score * 100).toFixed(1)}%</strong></span>
                             ${getStatusBadge(post.status)}
                             ${getModeratedBadge(post.moderated)}
-                            <span class="text-xs text-gray-500">Score: <strong>${(post.spam_score * 100).toFixed(1)}%</strong></span>
                         </div>
                     </div>
                     <div class="flex flex-row space-x-2 ml-4">
@@ -161,7 +167,9 @@ async function showPostSpamAnalysis(postId) {
 
 async function loadModeratorComments() {
     try {
-        const comments = await api.getPendingComments();
+        const statusToggle = document.getElementById('comment-status-toggle');
+        const status = statusToggle.checked ? 'spam' : 'published';
+        const comments = await api.getPendingComments(50, status);
         const container = document.getElementById('pending-comments');
         if (comments.length === 0) {
             container.innerHTML = '<p class="text-green-600 font-medium">No comments for moderation</p>';
