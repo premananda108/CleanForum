@@ -538,7 +538,6 @@ class Post:
                     await vector_manager.add_vector(
                         doc_id=vector_doc_id,
                         vector=post_vector,
-                        label=post.status.value,
                         title=post.title,
                         content=post.content
                     )
