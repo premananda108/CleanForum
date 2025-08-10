@@ -183,10 +183,18 @@ function getSpamBadge(isSpam, spamScore) {
 // State variables for pagination
 let currentPage = 1;
 const POSTS_PER_PAGE = 20;
+let currentCategoryId = null; // Track current category
 
 // Main page functions
 async function loadPosts({ page = 1, categoryId = null } = {}) {
-    currentPage = page;
+    // Reset to page 1 when changing category
+    if (categoryId !== undefined) {
+        currentPage = 1;
+        page = 1;
+        currentCategoryId = categoryId; // Update current category
+    } else {
+        currentPage = page;
+    }
     const offset = (currentPage - 1) * POSTS_PER_PAGE;
 
     try {
@@ -195,8 +203,27 @@ async function loadPosts({ page = 1, categoryId = null } = {}) {
         const totalPosts = response.total;
 
         const container = document.getElementById('posts-container');
-
+        
         if (!container) return; // Exit if container not found
+        
+        // Update the posts section title based on current filter
+        const postsTitle = document.querySelector('h2:has(.fa-fire)');
+        if (postsTitle && window.location.pathname === '/') {
+            if (currentCategoryId) {
+                // Find category name
+                const categories = await api.getCategories();
+                const category = categories.find(cat => cat.id === currentCategoryId);
+                postsTitle.innerHTML = `
+                    <i class="fas fa-filter mr-3 text-blue-500"></i>
+                    Posts in ${category ? category.name : 'Category'}
+                `;
+            } else {
+                postsTitle.innerHTML = `
+                    <i class="fas fa-fire mr-3 text-yellow-500"></i>
+                    Latest Posts
+                `;
+            }
+        }
 
         if (posts.length === 0) {
             container.innerHTML = `
@@ -209,7 +236,7 @@ async function loadPosts({ page = 1, categoryId = null } = {}) {
                 </div>
             `;
             // Still render pagination to clear it if it exists
-            renderPagination(0, categoryId);
+            renderPagination(0, currentCategoryId);
             return;
         }
 
@@ -259,7 +286,7 @@ async function loadPosts({ page = 1, categoryId = null } = {}) {
             `;
         }).join('');
 
-        renderPagination(totalPosts, categoryId);
+        renderPagination(totalPosts, currentCategoryId);
 
     } catch (error) {
         console.error('Error loading posts:', error);
@@ -283,7 +310,9 @@ function renderPagination(totalPosts, categoryId) {
         return;
     }
 
-    const categoryIdJSON = JSON.stringify(categoryId);
+    // Use current category if not specified
+    const actualCategoryId = categoryId !== undefined ? categoryId : currentCategoryId;
+    const categoryIdJSON = JSON.stringify(actualCategoryId);
 
     let paginationHTML = '<div class="flex justify-between items-center mt-6 pt-4 border-t border-gray-100">';
 
@@ -324,16 +353,48 @@ async function loadCategories() {
             return;
         }
 
-        container.innerHTML = categories.map(cat => `
-            <a href="/category/${cat.id}"
-               class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                <div class="flex items-center space-x-3">
-                    <div class="w-3 h-3 rounded-full" style="background-color: ${cat.color}"></div>
-                    <span class="font-medium text-gray-700 group-hover:text-blue-600">${cat.name}</span>
-                </div>
-                <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-lg text-xs font-medium">${cat.post_count}</span>
-            </a>
-        `).join('');
+        // Check if we're on the homepage to add click handlers for category filtering
+        const isHomepage = window.location.pathname === '/';
+        
+        if (isHomepage) {
+            // Add "All Posts" option on homepage
+            const isAllSelected = currentCategoryId === null;
+            const allPostsOption = `
+                <a href="#" onclick="loadPosts(); return false;"
+                   class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group ${isAllSelected ? 'bg-blue-50 border border-blue-200' : ''}">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 rounded-full bg-gray-400"></div>
+                        <span class="font-medium ${isAllSelected ? 'text-blue-600' : 'text-gray-700'} group-hover:text-blue-600">All Posts</span>
+                    </div>
+                </a>
+            `;
+            
+            container.innerHTML = allPostsOption + categories.map(cat => {
+                const isSelected = currentCategoryId === cat.id;
+                return `
+                    <a href="#" onclick="loadPosts({ categoryId: '${cat.id}' }); return false;"
+                       class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group ${isSelected ? 'bg-blue-50 border border-blue-200' : ''}">
+                        <div class="flex items-center space-x-3">
+                            <div class="w-3 h-3 rounded-full" style="background-color: ${cat.color}"></div>
+                            <span class="font-medium ${isSelected ? 'text-blue-600' : 'text-gray-700'} group-hover:text-blue-600">${cat.name}</span>
+                        </div>
+                        <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-lg text-xs font-medium">${cat.post_count}</span>
+                    </a>
+                `;
+            }).join('');
+        } else {
+            // For other pages, keep the original behavior with regular links
+            container.innerHTML = categories.map(cat => `
+                <a href="/category/${cat.id}"
+                   class="flex items-center justify-between p-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-3 h-3 rounded-full" style="background-color: ${cat.color}"></div>
+                        <span class="font-medium text-gray-700 group-hover:text-blue-600">${cat.name}</span>
+                    </div>
+                    <span class="bg-gray-100 text-gray-600 px-2 py-1 rounded-lg text-xs font-medium">${cat.post_count}</span>
+                </a>
+            `).join('');
+        }
 
     } catch (error) {
         console.error('Error loading categories:', error);
