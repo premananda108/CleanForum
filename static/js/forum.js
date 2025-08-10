@@ -827,47 +827,32 @@ async function initCreatePostPage() {
 
 // Search page functions
 async function handleSearchForm() {
-    const form = document.getElementById('search-form');
     const resultsContainer = document.getElementById('search-results-container');
     const queryInput = document.getElementById('search-query');
 
-    if (!form) return;
-
-    // Check for query in URL and trigger search on page load
-    const urlParams = new URLSearchParams(window.location.search);
-    const q = urlParams.get('q');
-    if (q) {
-        queryInput.value = q;
-        await performSearch(q);
-    }
-
-    form.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        const query = queryInput.value.trim();
-
-        // Update URL without reloading
-        const newUrl = new URL(window.location);
-        newUrl.searchParams.set('q', query);
-        window.history.pushState({path: newUrl.href}, '', newUrl.href);
-
-        await performSearch(query);
-    });
+    // This function will now only handle displaying results on the search page
+    // based on the URL query parameter.
 
     async function performSearch(query) {
-        if (query.length < 2) {
+        if (!query || query.length < 2) {
             resultsContainer.innerHTML = `
                 <div class="bg-yellow-50 border border-yellow-200 rounded-2xl p-6 text-center">
-                    <i class="fas fa-exclamation-triangle text-yellow-500 text-2xl mb-2"></i>
-                    <p class="text-yellow-800 font-medium">Search query must be at least 2 characters long</p>
+                    <i class="fas fa-info-circle text-yellow-500 text-2xl mb-2"></i>
+                    <p class="text-yellow-800 font-medium">Enter a search query of at least 2 characters to begin.</p>
                 </div>
             `;
             return;
         }
 
+        // Set input value to the query from URL
+        if(queryInput) {
+            queryInput.value = query;
+        }
+
         resultsContainer.innerHTML = `
             <div class="text-center py-12">
                 <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-4"></div>
-                <p class="text-gray-600">Searching the database...</p>
+                <p class="text-gray-600">Searching for "${query}"...</p>
             </div>
         `;
 
@@ -884,6 +869,15 @@ async function handleSearchForm() {
                 </div>
             `;
         }
+    }
+
+    // Check for query in URL and trigger search on page load
+    const urlParams = new URLSearchParams(window.location.search);
+    const q = urlParams.get('q');
+
+    // The search page should only show results if a query is present
+    if (resultsContainer) {
+       performSearch(q);
     }
 }
 
