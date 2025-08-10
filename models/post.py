@@ -279,6 +279,8 @@ class Post:
 
         update_fields = {}
         reanalyze_spam = False
+        category_changed = False
+        old_category_id = existing_data.get("category_id")
 
         if post_data.title is not None:
             update_fields["title"] = post_data.title
@@ -287,8 +289,9 @@ class Post:
             update_fields["content"] = post_data.content
             update_fields["reading_time"] = Post.calculate_reading_time(post_data.content)
             reanalyze_spam = True
-        if post_data.category_id is not None:
+        if post_data.category_id is not None and post_data.category_id != old_category_id:
             update_fields["category_id"] = post_data.category_id
+            category_changed = True
         if post_data.tags is not None:
             update_fields["tags"] = json.dumps(post_data.tags)
             reanalyze_spam = True
@@ -301,7 +304,21 @@ class Post:
                 update_fields["spam_score"] = 0.0
                 update_fields["status"] = PostStatus.PUBLISHED.value
 
-            await db.hset(f"post:{post_id}", mapping=update_fields)
+            async with db.redis_client.pipeline(transaction=True) as pipe:
+                pipe.hset(f"post:{post_id}", mapping=update_fields)
+                if category_changed:
+                    # Move the post from the old category to the new one
+                    if old_category_id:
+                        pipe.zrem(f"posts:category:{old_category_id}", post_id)
+                    pipe.zadd(f"posts:category:{post_data.category_id}", {post_id: datetime.now().timestamp()})
+                await pipe.execute()
+
+            # Update post counts if category has changed
+            if category_changed:
+                from models.category import Category
+                if old_category_id:
+                    await Category.update_post_count(old_category_id, -1)
+                await Category.update_post_count(post_data.category_id, 1)
 
         return True
 
