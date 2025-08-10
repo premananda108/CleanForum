@@ -21,8 +21,7 @@ Stores complete information about a post. It is the **source of truth** for disp
 |------------------|-----------|--------------------------------------------------------------------------|
 | `id`             | `string`  | Post UUID, duplicates part of the key.                                   |
 | `title`          | `string`  | Full title of the post.                                                  |
-| `content`        | `string`  | **Clean text** of the post (without JSON), extracted from Editor.js. Used for SEO and previews. |
-| `content_json`   | `string`  | **Source JSON** from Editor.js for rendering in the editor and on the page. |
+| `content`        | `string`  | The content of the post in Markdown format. |
 | `category_id`    | `string`  | UUID of the category to which the post belongs.                          |
 | `author_id`      | `string`  | UUID of the post's author.                                               |
 | `tags`           | `string`  | JSON array of strings with tags, e.g., `["python", "redis"]`.            |

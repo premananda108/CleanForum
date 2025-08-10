@@ -95,8 +95,7 @@ SECRET_KEY=your-secret-key-here
 
 ```bash
 # Run the development server
-cd app
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+python main.py
 ```
 
 The forum will be available at: http://localhost:8000
@@ -169,25 +168,40 @@ Available at: `/moderator`
 ## 🔧 API Endpoints
 
 ### Posts
+- `GET /api/posts` - Get a paginated list of posts.
+- `POST /api/posts` - Create a new post.
+- `GET /api/posts/{post_id}` - Get a single post by its ID.
+- `PUT /api/posts/{post_id}` - Update a post.
+- `DELETE /api/posts/{post_id}` - Delete a post.
+- `GET /api/posts/{post_id}/spam-analysis` - Get the spam analysis result for a specific post.
 
-- `GET /api/posts` - List of posts
-- `POST /api/posts` - Create a post
-- `GET /api/posts/{id}` - Get a post
-- `PUT /api/posts/{id}` - Update a post
-- `DELETE /api/posts/{id}` - Delete a post
+### Comments
+- `POST /api/comments` - Create a new comment.
+- `GET /api/posts/{post_id}/comments` - Get all comments for a specific post.
+
+### Categories
+- `GET /api/categories` - Get a list of all categories.
+- `POST /api/categories` - Create a new category.
+
+### Search
+- `GET /api/search` - Perform a full-text search for posts.
+
+### Users
+- `GET /api/users/me` - Get information about the currently authenticated user.
 
 ### Moderation
-
-- `GET /api/moderator/pending-posts` - Suspicious posts
-- `POST /api/moderator/moderate` - Moderate a post
-- `GET /api/moderator/spam-statistics` - Statistics
-- `GET /api/moderator/posts/{id}/analysis` - Spam analysis
-
-### Others
-
-- `GET /api/categories` - Categories
-- `GET /api/search` - Search
-- `POST /api/comments` - Comments
+- `GET /api/moderator/pending-posts` - Get posts pending moderation.
+- `POST /api/moderator/moderate-post` - Perform a moderation action (approve, mark as spam, delete) on a post.
+- `GET /api/moderator/posts/{post_id}/analysis` - Get detailed spam analysis for a post.
+- `GET /api/moderator/pending-comments` - Get comments pending moderation.
+- `POST /api/moderator/moderate-comment` - Perform a moderation action on a comment.
+- `GET /api/moderator/comments/{comment_id}/analysis` - Get detailed spam analysis for a comment.
+- `POST /api/moderator/analyze-all-posts` - Trigger a background analysis of all posts.
+- `POST /api/moderator/reanalyze-post/{post_id}` - Re-analyze a specific post for spam.
+- `GET /api/moderator/system-stats` - Get system-wide statistics (post counts, memory usage, etc.).
+- `POST /api/moderator/retrain` - (Placeholder) Start model retraining.
+- `GET /api/moderator/training-logs` - (Placeholder) Get training logs.
+- `GET /api/moderator/feedback-stats` - (Placeholder) Get moderator feedback statistics.
 
 ## 🧪 System Testing
 

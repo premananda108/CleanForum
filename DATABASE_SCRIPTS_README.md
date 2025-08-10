@@ -15,8 +15,8 @@ Creates a full set of test data without spam checking:
 ### 2. `clear_database.py` - Clear the database
 Completely deletes all data from the Redis database.
 
-### 3. `reindex_posts.py` - Re-index posts
-Recreates vector indexes for all existing posts.
+### 3. `rebuild_index.py` - Rebuild the search index
+Rebuilds the search index from scratch for all published posts.
 
 ## 🚀 Usage
 
@@ -35,9 +35,9 @@ Recreates vector indexes for all existing posts.
 
 ### Search Index Management
 
-3. **Re-index existing posts:**
+3. **Rebuild the search index:**
    ```bash
-   python reindex_posts.py
+   python rebuild_index.py
    ```
 
 ## 📊 What `populate_database.py` Creates
@@ -95,13 +95,10 @@ python clear_database.py
 python populate_database.py
 ```
 
-### Update Only Indexes:
+### Rebuilding the Search Index:
 ```bash
-# Delete the index
-python drop_index.py
-
-# Recreate the index
-python reindex_posts.py
+# This script first deletes the old index and then re-indexes all posts.
+python rebuild_index.py
 ```
 
 ## 📈 Execution Result
@@ -109,7 +106,7 @@ python reindex_posts.py
 After running `populate_database.py`, you will get:
 - 5 users with different roles
 - 5 categories for posts
-- ~13 posts (8 spam + 5 legitimate)
+- ~50 posts (25 spam + 25 legitimate)
 - Fully configured vector indexes
 - Correct counters and statistics
 
