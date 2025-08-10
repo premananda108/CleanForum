@@ -12,7 +12,7 @@ load_dotenv()
 class Settings:
     # Main settings
     APP_NAME: str = "CleanForum"
-    APP_VERSION: str = "0.3.0"
+    APP_VERSION: str = "0.4.0"
     RELOAD: bool = True
 
     # Logging settings
