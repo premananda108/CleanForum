@@ -1,6 +1,21 @@
 version: '3.8'
 
 services:
+  web:
+    build: .
+    container_name: web_app
+    ports:
+      - "8000:8000"
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    volumes:
+      - .:/app
+    networks:
+      - forum-network
+    depends_on:
+      - redis
+
   redis:
     image: "redis:8.0.3-bookworm"
     container_name: cleanforum_redis
@@ -9,6 +24,8 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+    networks:
+      - forum-network
 
   redis_test:
     image: "redis:8.0.3-bookworm"
@@ -18,7 +35,13 @@ services:
       - "6380:6379"
     volumes:
       - redis_test_data:/data
+    networks:
+      - forum-network
 
 volumes:
   redis_data:
   redis_test_data:
+
+networks:
+  forum-network:
+    driver: bridge
